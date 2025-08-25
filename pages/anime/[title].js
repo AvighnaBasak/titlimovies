@@ -40,7 +40,7 @@ export default function AnimeDetailPage() {
             .then((episodeData) => {
               setEpisodes(episodeData || []);
             })
-            .catch(err => console.error('Failed to fetch episodes:', err));
+            .catch(err => console.error(&apos;Failed to fetch episodes:&apos;, err));
         }
       });
   }, [title]);

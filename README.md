@@ -1,4 +1,4 @@
-# TitliMovies
+# TitliMovies--(updated 11:16 25 Aug)
 
 A modern, responsive streaming platform built with Next.js and Tailwind CSS that provides access to movies, TV shows, and anime content with multiple streaming servers and advanced search capabilities.
 
