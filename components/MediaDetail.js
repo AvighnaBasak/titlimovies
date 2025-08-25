@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 export default function MediaDetail({ item, type }) {
   if (!item) return null;
   // Poster
@@ -17,11 +19,14 @@ export default function MediaDetail({ item, type }) {
 
   return (
     <div className="flex flex-col md:flex-row gap-6 items-start">
-      <img
+      <Image
         src={poster}
         alt={title}
+        width={176}
+        height={256}
         className="w-44 h-64 object-cover rounded-3xl shadow-lg mb-4 md:mb-0"
         onError={(e) => { e.target.src = '/placeholder.png'; }}
+        priority
       />
       <div className="flex-1">
         <h1 className="text-3xl font-bold mb-2">{title}</h1>

@@ -1,5 +1,6 @@
  // components/MediaCard.js
  import Link from "next/link";
+ import Image from "next/image";
 
  export default function MediaCard({ item, type }) {
    // Handle poster / image - use the 'poster' field from API response
@@ -36,9 +37,11 @@
       <div className="group bg-gradient-to-b from-gray-800/50 to-gray-900/80 backdrop-blur rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl hover:scale-105 hover:bg-gray-800/60 transition-all duration-300 cursor-pointer border border-gray-700/30">
         {/* Poster */}
         <div className="relative overflow-hidden">
-          <img
+          <Image
             src={poster}
             alt={title}
+            width={300}
+            height={288}
             className="w-full h-72 object-cover group-hover:scale-110 transition-transform duration-300"
             loading="lazy"
             onError={(e) => {

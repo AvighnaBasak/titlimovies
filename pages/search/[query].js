@@ -35,7 +35,7 @@ export default function SearchResults() {
       <Navbar />
       <SearchBar />
       <div className="max-w-6xl mx-auto px-4 py-6">
-        <h1 className="text-2xl font-bold mb-4">Search Results for "{query}"</h1>
+        <h1 className="text-2xl font-bold mb-4">Search Results for &quot;{query}&quot;</h1>
         {loading ? (
           <div className="text-center py-10">Loading...</div>
         ) : (

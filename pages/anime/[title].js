@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import Navbar from "../../components/Navbar";
 import SearchBar from "../../components/SearchBar";
 import MediaDetail from "../../components/MediaDetail";
-import Player from "../../components/Player";
 import SimilarMedia from "../../components/SimilarMedia";
 
 export default function AnimeDetailPage() {
@@ -40,7 +39,7 @@ export default function AnimeDetailPage() {
             .then((episodeData) => {
               setEpisodes(episodeData || []);
             })
-            .catch(err => console.error(&apos;Failed to fetch episodes:&apos;, err));
+            .catch(err => console.error('Failed to fetch episodes:', err));
         }
       });
   }, [title]);
