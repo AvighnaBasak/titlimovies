@@ -4,7 +4,12 @@ module.exports = {
     "./components/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        sans: ['"Netflix Sans"', 'Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif'],
+        netflix: ['"Netflix Sans"', 'Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif'],
+      },
+    },
   },
   plugins: [],
 };

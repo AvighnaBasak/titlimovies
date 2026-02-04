@@ -11,9 +11,9 @@ export default function MediaGrid({ items, type }) {
     );
   }
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-6 w-full">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5 gap-4 md:gap-2 w-full p-4">
       {items.map((item, idx) => (
-        <MediaCard key={item.id || item.imdb_id || item.title_en || idx} item={item} type={type} />
+        <MediaCard key={item.id || item.imdb_id || item.title_en || idx} item={item} type={item.media_type || type} variant="grid" />
       ))}
     </div>
   );

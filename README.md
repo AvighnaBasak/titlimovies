@@ -1,530 +1,414 @@
-# TitliMovies--(updated 11:16 25 Aug)
+TITLIMOVIES
 
-A modern, responsive streaming platform built with Next.js and Tailwind CSS that provides access to movies, TV shows, and anime content with multiple streaming servers and advanced search capabilities.
+Welcome to the comprehensive documentation for TITLIMOVIES.
 
-## Table of Contents
+This document serves as the single source of truth for the TITLIMOVIES project, a cutting edge entertainment application designed to provide users with a seamless, high fidelity streaming interface akin to premium industry standards.
 
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Installation](#installation)
-- [Environment Setup](#environment-setup)
-- [Development](#development)
-- [Build & Deployment](#build--deployment)
-- [API Integration](#api-integration)
-- [Component Documentation](#component-documentation)
-- [Styling Guidelines](#styling-guidelines)
-- [Performance Optimizations](#performance-optimizations)
-- [Browser Support](#browser-support)
-- [Contributing](#contributing)
-- [License](#license)
+TABLE OF CONTENTS
 
-## Features
+1. Introduction
+2. Project Vision and Scope
+3. Live Demonstration
+4. Technology Stack
+5. System Architecture
+6. Directory Structure
+7. Prerequisites
+8. Environment Configuration
+9. Installation Guide
+10. Running the Application
+11. Build and Production
+12. Application Features Deep Dive
+    12.1. Hero Banner System
+    12.2. Content Browsing and Layouts
+    12.3. Modal Interface Architecture
+    12.4. Video Playback Integration
+    12.5. Search Functionality
+    12.6. Responsive Design Strategy
+    12.7. Transition and Animation System
+13. Component Documentation
+    13.1. Core Components
+    13.2. Page Components
+    13.3. Context Providers
+14. API Integration Strategy
+    14.1. The Movie Database (TMDB)
+    14.2. Embed Proxies and Third Party Sources
+15. State Management
+16. Deployment Guide
+    16.1. Vercel Deployment
+    16.2. Manual Hosting
+17. Troubleshooting and Common Issues
+18. Performance Optimization
+19. Contributing Guidelines
+20. License and Acknowledgments
 
-### Core Functionality
-- **Multi-content Support**: Stream movies, TV shows, and anime
-- **Universal Search**: Intelligent search with real-time suggestions
-- **Multiple Streaming Servers**: 3 backup servers for reliability
-- **Episode Management**: Season and episode selection for TV shows and anime
-- **Responsive Design**: Optimized for mobile, tablet, and desktop
-- **Modern UI**: Glass morphism effects with smooth animations
+1. INTRODUCTION
 
-### Content Discovery
-- **Trending Content**: Weekly trending movies, TV shows, and anime
-- **Latest Releases**: Recently added content across all categories
-- **Coming Soon**: Upcoming releases and new content
-- **Similar Content**: AI-powered content recommendations
-- **Advanced Filtering**: Category-based content browsing
+TITLIMOVIES is a modern, responsive web application built with Next.js that allows users to browse, search, and view detailed information about movies, TV shows, and anime. It features a sophisticated user interface inspired by leading streaming platforms, focusing on visual immersion, smooth transitions, and intuitive navigation.
 
-### User Experience
-- **Fast Loading**: Optimized API caching and skeleton loading states
-- **Popup Blocking**: Secure iframe implementation with sandbox protection
-- **Cross-platform**: Works seamlessly across all devices
-- **Accessibility**: WCAG compliant design patterns
-- **SEO Optimized**: Server-side rendering with proper meta tags
+The application leverages the power of server side rendering (SSR) and static site generation (SSG) provided by Next.js to ensure optimal performance and SEO friendly content delivery. It integrates with external APIs to fetch real time metadata, imagery, and video content, presenting it all in a cohesive, dark themed aesthetic.
 
-## Tech Stack
+2. PROJECT VISION AND SCOPE
 
-### Frontend
-- **Framework**: Next.js 15.5.0 (React 19.1.0)
-- **Styling**: Tailwind CSS 4.x with custom design system
-- **Fonts**: Inter font family via next/font
-- **Icons**: SVG-based icon system
-- **State Management**: React Hooks (useState, useEffect)
+The primary goal of TITLIMOVIES is to demonstrate the capability of modern web technologies to replicate complex, native app like experiences in the browser.
 
-### Backend & APIs
-- **Proxy Server**: Custom Next.js API routes for CORS handling
-- **Movie/TV Data**: 2embed.cc API integration
-- **Anime Data**: AnimeAPI.skin integration
-- **Caching**: Edge caching with stale-while-revalidate strategy
+Key Objectives:
+- To provide a visually stunning interface with high resolution artwork and fluid animations.
+- To ensure complete responsiveness across all device types, from large desktop monitors to mobile phones.
+- To implement robust state management for seamless navigation without full page reloads.
+- To handle complex data structures from multiple API sources and unify them into a single data model.
+- To provide instant access to media content details through an advanced modal system.
 
-### Development Tools
-- **Linting**: ESLint with Next.js configuration
-- **Build System**: Turbopack for fast development and builds
-- **Package Manager**: npm
-- **Version Control**: Git with conventional commits
+Scope:
+- The project covers the frontend implementation of a streaming service interface.
+- It includes logic for browsing, searching, and viewing details.
+- It provides deep linking capabilities for specific media items and playback.
+- It does not currently handle user authentication or backend payment processing, focusing purely on content discovery and playback interface.
 
-## Project Structure
+3. LIVE DEMONSTRATION
 
-```
-titlimovies/
-├── components/                 # Reusable UI components
-│   ├── Footer.js              # Site footer with links
-│   ├── MediaCard.js           # Media item display card
-│   ├── MediaDetail.js         # Detailed media information
-│   ├── MediaGrid.js           # Grid layout for media items
-│   ├── Navbar.js              # Navigation header
-│   ├── Player.js              # Video player with server selection
-│   ├── SearchBar.js           # Universal search component
-│   ├── SimilarMedia.js        # Related content recommendations
-│   └── ToggleSwitch.js        # Animated category toggle
-├── pages/                     # Next.js pages and routing
-│   ├── api/                   # API routes
-│   │   └── proxy.js           # CORS proxy for external APIs
-│   ├── anime/                 # Anime-specific pages
-│   │   └── [title].js         # Dynamic anime detail page
-│   ├── movie/                 # Movie-specific pages
-│   │   └── [id].js            # Dynamic movie detail page
-│   ├── search/                # Search functionality
-│   │   └── [query].js         # Search results page
-│   ├── tv/                    # TV show pages
-│   │   └── [id].js            # Dynamic TV show detail page
-│   ├── _app.js                # App wrapper with global styles
-│   └── index.js               # Homepage with trending content
-├── public/                    # Static assets
-│   ├── favicon.ico            # Site favicon
-│   └── *.svg                  # Icon assets
-├── styles/                    # Global styles and CSS
-│   └── globals.css            # Tailwind imports and custom CSS
-├── eslint.config.mjs          # ESLint configuration
-├── next.config.ts             # Next.js configuration
-├── package.json               # Dependencies and scripts
-├── postcss.config.js          # PostCSS configuration
-├── tailwind.config.js         # Tailwind CSS configuration
-└── tsconfig.json              # TypeScript configuration
-```
+You can access the live version of TITLIMOVIES at the following URL:
 
-## Installation
+[Insert Your Deployment URL Here, e.g., https://titlimovies.vercel.app]
 
-### Prerequisites
-- Node.js 18.x or higher
-- npm 9.x or higher
-- Modern web browser (Chrome 90+, Firefox 88+, Safari 14+)
+We recommend viewing the application on both desktop and mobile devices to appreciate the responsive design adaptations.
 
-### Setup Steps
+4. TECHNOLOGY STACK
 
-1. **Clone the Repository**
-   ```bash
-   git clone https://github.com/yourusername/titlimovies.git
-   cd titlimovies
-   ```
+TITLIMOVIES is built upon a robust stack of modern technologies chosen for their performance, scalability, and developer experience.
 
-2. **Install Dependencies**
-   ```bash
-   npm install
-   ```
+Core Framework:
+- Next.js (React Framework): Chosen for its hybrid rendering capabilities, file based routing, and built in optimizations for images and fonts.
+- React.js: The underlying library for building composable user interfaces.
 
-3. **Install Additional Dependencies** (if needed)
-   ```bash
-   npm install -D tailwindcss@^3.4.0 postcss@^8.4.0 autoprefixer@^10.4.0
-   ```
+Language:
+- JavaScript (ES6+): The project utilizes modern JavaScript features including async/await, destructing, modules, and arrow functions.
 
-4. **Verify Installation**
-   ```bash
-   npm run lint
-   ```
+Styling:
+- Tailwind CSS: A utility first CSS framework used for rapid UI development. It allows for highly customizable designs without leaving the markup, ensuring a small CSS bundle size in production.
+- Custom CSS: Used for specific animations (keyframes) and scrollbar customizations that require fine grained control beyond utility classes.
 
-## Environment Setup
+State Management:
+- React Context API: Used for global state needs such as the modal visibility, page transitions, and theme management.
+- React Hooks: Extensive use of useState, useEffect, useCallback, and custom hooks for component level logic.
 
-### Development Environment
-Create a `.env.local` file in the root directory:
+Data Fetching:
+- Native Fetch API: standard browser API used for making HTTP requests to external services.
+- SWR (optional/future): The structure is ready for incremental adoption of SWR for caching strategies.
 
-```env
-# Development Configuration
-NODE_ENV=development
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+External APIs:
+- TMDB (The Movie Database): The primary source for metadata, posters, backdrops, cast information, and release dates.
+- 2embed.cc: A third party API used for fetching trending lists and specific category data.
+- VidSrc/VidFast: Integration endpoints for video player sourcing.
 
-# API Configuration
-NEXT_PUBLIC_API_CACHE_TIME=300
-NEXT_PUBLIC_ENABLE_ANALYTICS=false
+Icons:
+- SVG Icons: Custom SVG implementations are used throughout the application to ensure crisp rendering at any scale without external font dependencies.
 
-# Feature Flags
-NEXT_PUBLIC_ENABLE_SERVER_SWITCHING=true
-NEXT_PUBLIC_MAX_SEARCH_RESULTS=8
-```
+5. SYSTEM ARCHITECTURE
 
-### Production Environment
-```env
-# Production Configuration
-NODE_ENV=production
-NEXT_PUBLIC_APP_URL=https://yourdomain.com
+The application follows a modular component based architecture.
 
-# Performance Settings
-NEXT_PUBLIC_API_CACHE_TIME=600
-NEXT_PUBLIC_ENABLE_ANALYTICS=true
+- Pages: Top level components that correspond to routes (Home, Movie Details, TV Details, Anime).
+- Components: Reusable UI blocks (Hero, Cards, Modals, Navbar).
+- Contexts: Wrappers that provide global functionality (Transition, Modal) to the component tree.
+- Styles: Global stylesheets and utility configurations.
 
-# Security Settings
-NEXT_PUBLIC_IFRAME_SANDBOX=true
-NEXT_PUBLIC_REFERRER_POLICY=no-referrer
-```
+Data Flow:
+1. Identifying Data Requirements: Pages determine what data they need (e.g., specific movie ID).
+2. Fetching: Data is fetched either on the server side (getServerSideProps) or client side (useEffect) depending on SEO needs and data dynamic nature.
+3. Transformation: Raw API response data is normalized into a consistent format used by UI components.
+4. Rendering: Components receive data via props and render the interface.
+5. Interaction: User actions trigger state updates via Context or local state, causing re-renders or navigation events.
 
-## Development
+6. DIRECTORY STRUCTURE
 
-### Available Scripts
+The project directory is organized to promote separation of concerns and maintainability.
 
-```bash
-# Start development server with Turbopack
+/
+|-- components/          # Reusable UI components
+|   |-- Footer.js        # Global footer component
+|   |-- HeroBanner.js    # The large featured content area at the top
+|   |-- HoverCard.js     # Desktop hover preview card logic
+|   |-- InfoModal.js     # The detailed popup modal for content
+|   |-- MediaCard.js     # The standard card component for lists
+|   |-- MediaDetail.js   # Detailed view component (fallback)
+|   |-- MediaGrid.js     # Grid layout for search and collections
+|   |-- MediaRow.js      # Horizontally scrolling rows for categories
+|   |-- Navbar.js        # Global navigation bar
+|   |-- Player.js        # Video player wrapper and logic
+|   |-- SearchBar.js     # Search input logic
+|   |-- SimilarMedia.js  # Component to show related content
+|   |-- Spinner.js       # Loading state indicator
+|
+|-- context/             # Global React Context definitions
+|   |-- ModalContext.js      # Manages the open/closed state of InfoModal
+|   |-- TransitionContext.js # Manages page transition animations
+|
+|-- pages/               # Next.js Routing
+|   |-- api/             # API routes and proxies
+|   |   |-- proxy.js     # Server side proxy for CORS handling
+|   |-- anime/           # Anime specific routes
+|   |   |-- [title].js   # Dynamic route for anime details
+|   |-- movie/           # Movie specific routes
+|   |   |-- [id].js      # Dynamic route for movie playback/details
+|   |-- tv/              # TV Show specific routes
+|   |   |-- [id].js      # Dynamic route for TV playback/details
+|   |-- _app.js          # Root application wrapper
+|   |-- _document.js     # Document structure (head, body)
+|   |-- index.js         # The Homepage
+|
+|-- public/              # Static assets (images, favicon)
+|-- styles/              # CSS files
+|   |-- globals.css      # Main stylesheet with Tailwind imports
+|
+|-- .env.local           # Local environment variables (API keys)
+|-- .gitignore           # Files to exclude from Git
+|-- package.json         # Project dependencies and scripts
+|-- tailwind.config.js   # Tailwind CSS configuration
+|-- next.config.ts       # Next.js configuration
+
+7. PREREQUISITES
+
+Before starting the installation process, ensure your development environment meets the following requirements:
+
+- Node.js: Version 16.0.0 or higher. We recommend the usage of LTS versions (e.g., 18.x or 20.x).
+- Package Manager: npm (usually comes with Node.js) or Yarn. The documentation will use npm commands.
+- Git: Version control system to clone the repository.
+- Code Editor: VS Code is recommended for its excellent React and JavaScript support.
+
+8. ENVIRONMENT CONFIGURATION
+
+TITLIMOVIES requires access to the TMDB API. You must configure environment variables to securely store your API key.
+
+1. Obtain a TMDB API Key:
+   - Create an account at https://www.themoviedb.org
+   - Navigate to Settings > API
+   - Generate a new API Key (v3)
+
+2. Create Configuration File:
+   In the root directory of the project, create a file named `.env.local`.
+
+3. Add Variable:
+   Add the following line to the file, replacing the placeholder with your actual key:
+
+   NEXT_PUBLIC_TMDB_API_KEY=your_actual_api_key_here
+
+   Note: The prefix `NEXT_PUBLIC_` is essential as it exposes the variable to the browser side of the application, which is necessary for the client side fetch operations used in this project.
+
+9. INSTALLATION GUIDE
+
+Follow these steps to set up the project locally.
+
+Step 1: Clone the Repository
+Open your terminal and run:
+
+git clone https://github.com/yourusername/TITLIMOVIES.git
+
+Step 2: Navigate to Project Directory
+Change into the newly created folder:
+
+cd TITLIMOVIES
+
+Step 3: Install Dependencies
+Run the installation command to download all required node modules:
+
+npm install
+
+This process may take a few minutes depending on your internet connection.
+
+10. RUNNING THE APPLICATION
+
+Development Mode:
+To start the application in development mode with hot reloading (changes reflect instantly):
+
 npm run dev
 
-# Build for production
+Open your browser and navigate to http://localhost:3000
+
+You should see the TITLIMOVIES homepage.
+
+11. BUILD AND PRODUCTION
+
+To deploy the application or run it in a production like environment locally:
+
+Step 1: Build the Project
+This compiles the application and optimizes assets:
+
 npm run build
 
-# Start production server
+Step 2: Start Production Server
+This allows you to test the built application:
+
 npm start
 
-# Run linting
-npm run lint
+The application will be accessible at http://localhost:3000 but running the optimized production build.
 
-# Type checking (if using TypeScript)
-npm run type-check
-```
+12. APPLICATION FEATURES DEEP DIVE
 
-### Development Server
-Start the development server:
-```bash
-npm run dev
-```
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+12.1. HERO BANNER SYSTEM
+The Hero Banner is the centerpiece of the homepage.
+- Randomization: On every load and every 35 seconds, it selects a random item from the trending list.
+- Video Integration: It attempts to fetch a trailer video (YouTube) for the selected item. If found, it plays it silenty in the background.
+- Fallback: If no video is available, it gracefully falls back to a high resolution backdrop image.
+- Mobile Logic: The layout aggressively adapts for mobile, shifting content vertically to ensure buttons are reachable and visible.
 
-### Hot Reloading
-The development server supports:
-- Hot module replacement for React components
-- CSS hot reloading for Tailwind styles
-- API route hot reloading for backend changes
+12.2. CONTENT BROWSING AND LAYOUTS
+- Media Rows: Content is organized in horizontally scrolling rails.
+- Media Cards: Each item uses a sophisticated card component.
+    - Top 10 Variant: Special large numbering styling for top trending content.
+    - Standard Variant: Used for general categories.
+- Hover Effects: On desktop, hovering a card expands it to show a preview trailer, genres, and metadata (HoverCard component).
 
-## Build & Deployment
+12.3. MODAL INTERFACE ARCHITECTURE
+We utilize a React Portal based modal system (`InfoModal.js`) that renders outside the main DOM hierarchy to ensure it layers correctly over all other content.
+- Global Access: The modal can be triggered from anywhere in the app via the `ModalContext`.
+- Content: Fetches deep details including seasons/episodes for TV shows, similar movies, cast, and more.
+- Layout: Features a complex responsive grid that realigns itself completely for mobile devices vs desktop views.
 
-### Production Build
-```bash
-npm run build
-npm start
-```
+12.4. VIDEO PLAYBACK INTEGRATION
+The application integrates with external player sources.
+- Logic: The `Player.js` component constructs URLs based on TMDB IDs.
+- Deep Linking: Supports specific season and episode parameters for TV shows.
 
-### Deployment Platforms
+12.5. SEARCH FUNCTIONALITY
+- Global Search: Located in the Navbar.
+- Debouncing: Search requests are optimized to prevent flooding the API.
+- Results: Displays a combined grid of Movies and TV shows matching the query.
 
-#### Vercel (Recommended)
-```bash
-npm install -g vercel
-vercel --prod
-```
+12.6. RESPONSIVE DESIGN STRATEGY
+TITLIMOVIES is built with a mobile first mindset but polished for desktop 4K screens.
+- Breakpoints: We use Tailwind defaults (sm, md, lg, xl, 2xl).
+- Conditional Rendering: Certain heavy components (like HoverCards) are conditionally rendered or hidden via CSS on mobile to improve performance and usability.
+- Touch Targets: Buttons and interactive elements are sized larger on mobile for touch accessibility.
 
-#### Netlify
-```bash
-npm install -g netlify-cli
-netlify deploy --prod --dir=.next
-```
+12.7. TRANSITION AND ANIMATION SYSTEM
+- Custom Context: `TransitionContext.js` manages page navigation.
+- Effect: When a user clicks a link, the app orchestrates a fade out animation, waits for it to complete, navigates, and then fades the new page in.
+- Purpose: This creates a cinematic, "app like" feel rather than a jarring web page reload.
 
-#### Docker
-```dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-COPY . .
-RUN npm run build
-EXPOSE 3000
-CMD ["npm", "start"]
-```
+13. COMPONENT DOCUMENTATION
 
-## API Integration
+13.1. CORE COMPONENTS
+- Navbar.js:
+  - Sticky positioning with scroll detection to change background opacity.
+  - Contains logo, navigation links, and search bar.
+  - Mobile: Collapses links into a simplified view.
 
-### External APIs Used
+- Footer.js:
+  - Static component providing copyright info and links.
+  - Styled to match the dark theme.
 
-#### 2embed.cc API
-- **Movies**: `https://api.2embed.cc/movie?imdb_id={id}`
-- **TV Shows**: `https://api.2embed.cc/tv?imdb_id={id}`
-- **Trending**: `https://api.2embed.cc/trending?time_window=week&page=1`
-- **Search**: `https://api.2embed.cc/search?q={query}&page=1`
-- **Similar Content**: `https://api.2embed.cc/similar?imdb_id={id}&page=1`
+13.2. PAGE COMPONENTS
+- index.js (Home):
+  - Aggregates multiple data sources.
+  - Implements the Hero Banner rotation logic.
+  - Renders the vertical stack of MediaRows.
 
-#### AnimeAPI.skin
-- **Trending**: `https://animeapi.skin/trending`
-- **Latest**: `https://animeapi.skin/new?page={number}`
-- **Search**: `https://animeapi.skin/search?q={query}&page={number}`
-- **Episodes**: `https://animeapi.skin/episodes?title={title}`
+- [id].js (Dynamic Routes):
+  - Handles the display of specific media playback pages.
+  - Reads URL parameters to determine what content to load.
 
-### Proxy Implementation
-All API calls go through `/api/proxy` to handle:
-- CORS headers
-- Rate limiting
-- Error handling
-- Response caching
-- Request optimization
+13.3. CONTEXT PROVIDERS
+- ModalProvider:
+  - State: `isModalOpen`, `modalContent`.
+  - Exports: `openModal(content)`, `closeModal()`.
+- TransitionProvider:
+  - State: `isTransitioning`, `opacity`.
+  - Exports: `navigateDelay(url)` which handles the timing of route changes.
 
-### Streaming Sources
+14. API INTEGRATION STRATEGY
 
-#### Movies & TV Shows
-1. **2embed.cc**: Primary streaming source
-2. **VidSrc.to**: Alternative reliable source
-3. **MultiEmbed.mov**: Backup streaming option
+14.1. THE MOVIE DATABASE (TMDB)
+- Base URL: https://api.themoviedb.org/3
+- Authentication: API Key via query parameter.
+- Endpoints Used:
+    - /trending: For homepage content.
+    - /movie/{id}: For details.
+    - /tv/{id}: For details and season/episode data.
+    - /search: For user queries.
 
-#### Anime
-1. **2anime.xyz**: Primary anime streaming
-2. **GogoAnime**: Alternative anime source
-3. **AniWatch**: Backup anime streaming
+14.2. PROXY HANDLING
+To avoid CORS issues and obscure API keys (partially), the application uses Next.js API Routes (`pages/api/proxy.js`) to relay requests to 2embed and other third party data sources that might not support direct browser calls or have strict CORS policies.
 
-## Component Documentation
+15. STATE MANAGEMENT
 
-### Core Components
+We deliberately avoid heavy state libraries like Redux to keep the bundle size small.
+- Local State: Used for form inputs, loading spinners, and component specific visibility.
+- Context State: Used for application wide concerns (Modal, Page Transitions).
+- URL State: The URL is treated as a source of truth for searches (`?q=...`) and direct content access (`/movie/123`), ensuring shareability.
 
-#### Navbar
-```jsx
-<Navbar />
-```
-- Responsive navigation header
-- Logo with home link
-- Left-aligned branding
+16. DEPLOYMENT GUIDE
 
-#### SearchBar
-```jsx
-<SearchBar hideTypeSelector={boolean} />
-```
-- Universal search with suggestions
-- Type selector (movies/TV/anime)
-- Real-time search suggestions
-- Mobile-responsive design
+16.1. VERCEL DEPLOYMENT (Recommended)
+Vercel is the creators of Next.js and provides the best experience.
 
-#### MediaCard
-```jsx
-<MediaCard item={object} type={string} />
-```
-- Displays media poster and information
-- Hover animations and effects
-- Responsive grid layout
-- Link to detail pages
+1. Create a Vercel Account.
+2. Link your GitHub repository.
+3. Import the TITLIMOVIES project.
+4. Environment Variables:
+   - In the "Build & Development Settings", find the Environment Variables section.
+   - Add `NEXT_PUBLIC_TMDB_API_KEY` with your key value.
+5. Click Deploy.
+   - Vercel will automatically detect Next.js, run `npm install`, `npm run build`, and deploy.
 
-#### Player
-```jsx
-<Player 
-  imdb_id={string}
-  tmdb_id={string}
-  type={string}
-  season={number}
-  episode={number}
-  title={string}
-  number={number}
-/>
-```
-- Multi-server video player
-- Popup blocking with sandbox
-- Responsive iframe container
-- Server switching functionality
+16.2. MANUAL HOSTING
+You can host on any server utilizing Node.js.
 
-#### ToggleSwitch
-```jsx
-<ToggleSwitch 
-  value={string}
-  onChange={function}
-  options={array}
-/>
-```
-- Animated sliding toggle
-- Smooth transitions
-- Multiple option support
-- Active state indicators
+1. Run `npm run build`.
+2. Upload the `.next`, `public`, `package.json`, and `node_modules` folders to your server.
+3. Start the application using a process manager like PM2:
+   pm2 start npm --name "titlimovies" -- start
 
-### Utility Components
+17. TROUBLESHOOTING AND COMMON ISSUES
 
-#### MediaGrid
-- Responsive grid layout
-- Loading skeleton states
-- Empty state handling
-- Optimized for mobile
+Issue: content not loading / generic errors.
+Fix: Check your `.env.local` file. Ensure `NEXT_PUBLIC_TMDB_API_KEY` is set correctly and the key is active.
 
-#### MediaDetail
-- Comprehensive media information
-- Poster and metadata display
-- Genre and cast information
-- Release and production details
+Issue: Images are broken.
+Fix: TMDB image URLs sometimes change. Ensure the base URL configuration in `MediaCard.js` matches TMDB documentation.
 
-#### SimilarMedia
-- Related content recommendations
-- API-driven suggestions
-- Grid layout integration
-- Type-specific filtering
+Issue: Video player shows 404.
+Fix: The video source (VidSrc/VidFast) might be down or changed their URL structure. Check `Player.js` to update the iframe source URL.
 
-#### Footer
-- Site-wide footer component
-- Navigation links
-- Legal information
-- Social media links
+Issue: Mobile layout looks weird.
+Fix: Clear your browser cache. The responsive CSS relies on updated Tailwind classes that might be cached during development.
 
-## Styling Guidelines
+18. PERFORMANCE OPTIMIZATION
 
-### Design System
+- Image Optimization: We use `next/image` for all posters and backdrops. This automatically serves WebP formats and lazy loads images as they scroll into view.
+- Code Splitting: Next.js automatically splits code per page.
+- Font Loading: Fonts are loaded via `next/font` to prevent layout shift (CLS).
+- Memoization: Expensive calculations and function references are wrapped in `useMemo` and `useCallback` where appropriate.
 
-#### Colors
-```css
-/* Primary Colors */
---gray-950: #030712;
---gray-900: #111827;
---gray-800: #1f2937;
+19. CONTRIBUTING GUIDELINES
 
-/* Accent Colors */
---blue-600: #2563eb;
---purple-600: #9333ea;
---blue-400: #60a5fa;
---purple-400: #c084fc;
+We welcome contributions to TITLIMOVIES!
 
-/* Text Colors */
---text-white: #ffffff;
---text-gray-300: #d1d5db;
---text-gray-400: #9ca3af;
-```
+1. Fork the Project.
+2. Create your Feature Branch:
+   git checkout -b feature/AmazingFeature
+3. Commit your Changes:
+   git commit -m "Add some AmazingFeature"
+4. Push to the Branch:
+   git push origin feature/AmazingFeature
+5. Open a Pull Request.
 
-#### Typography
-```css
-/* Font Family */
-font-family: 'Inter', sans-serif;
+Coding Standards:
+- Use functional components and Hooks.
+- Keep components small and focused.
+- Name files using PascalCase for components.
+- No emojis in commit messages or documentation.
+- Ensure no console logs are left in production code.
 
-/* Font Sizes */
---text-xs: 0.75rem;
---text-sm: 0.875rem;
---text-base: 1rem;
---text-lg: 1.125rem;
---text-xl: 1.25rem;
---text-2xl: 1.5rem;
---text-3xl: 1.875rem;
-```
+20. LICENSE AND ACKNOWLEDGMENTS
 
-#### Border Radius
-```css
---rounded-lg: 0.5rem;
---rounded-xl: 0.75rem;
---rounded-2xl: 1rem;
---rounded-3xl: 1.5rem;
-```
+License:
+This project is open source and available under the MIT License.
 
-#### Shadows
-```css
---shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
---shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
---shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-```
-
-### Responsive Breakpoints
-```css
-/* Mobile First Approach */
-sm: 640px   /* Small devices (landscape phones) */
-md: 768px   /* Medium devices (tablets) */
-lg: 1024px  /* Large devices (laptops) */
-xl: 1280px  /* Extra large devices (desktops) */
-2xl: 1536px /* 2X large devices (large desktops) */
-```
-
-### Animation Guidelines
-- Use `transition-all` for smooth state changes
-- Duration: 150ms-300ms for micro-interactions
-- Easing: `ease-out` for natural movement
-- Transform: `scale-105` for hover effects
-- Opacity transitions for loading states
-
-## Performance Optimizations
-
-### Image Optimization
-- Lazy loading with `loading="lazy"`
-- Responsive image sources
-- WebP format support
-- Fallback image handling
-
-### API Optimization
-- Response caching with `stale-while-revalidate`
-- Request deduplication
-- Parallel API calls for multiple sections
-- Error boundary implementation
-
-### Bundle Optimization
-- Code splitting by route
-- Dynamic imports for heavy components
-- Tree shaking for unused code
-- CSS purging in production
-
-### Loading Performance
-- Skeleton loading states
-- Progressive image loading
-- Preload critical resources
-- Service worker caching
-
-## Browser Support
-
-### Supported Browsers
-- Chrome 90+ (Primary target)
-- Firefox 88+
-- Safari 14+
-- Edge 90+
-- Opera 76+
-
-### Mobile Support
-- iOS Safari 14+
-- Chrome Mobile 90+
-- Samsung Internet 14+
-- Firefox Mobile 88+
-
-### Feature Support
-- CSS Grid and Flexbox
-- CSS Custom Properties
-- ES2020+ JavaScript features
-- Web APIs (Fetch, Intersection Observer)
-- Modern CSS (backdrop-filter, CSS gradients)
-
-## Contributing
-
-### Development Workflow
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Run tests and linting (`npm run lint`)
-5. Commit your changes (`git commit -m 'Add amazing feature'`)
-6. Push to the branch (`git push origin feature/amazing-feature`)
-7. Open a Pull Request
-
-### Code Standards
-- Use functional components with hooks
-- Follow ESLint configuration
-- Write descriptive commit messages
-- Add comments for complex logic
-- Test on multiple devices/browsers
-
-### Pull Request Guidelines
-- Provide clear description of changes
-- Include screenshots for UI changes
-- Update documentation if needed
-- Ensure all checks pass
-- Request review from maintainers
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-### Third-party Licenses
-- Next.js: MIT License
-- React: MIT License
-- Tailwind CSS: MIT License
-- External APIs: Respective terms of service apply
-
-## Support
-
-### Getting Help
-- Check existing issues before creating new ones
-- Provide detailed reproduction steps
-- Include browser and system information
-- Use appropriate issue templates
-
-### Contact
-- GitHub Issues: [Create an issue](https://github.com/yourusername/titlimovies/issues)
-- Email: support@titlimovies.com
-- Documentation: [Wiki](https://github.com/yourusername/titlimovies/wiki)
+Acknowledgments:
+- TMDB: This product uses the TMDB API but is not endorsed or certified by TMDB.
+- Next.js Team: For the amazing framework.
+- Netflix: For the design inspiration behind the UI structure.
 
 ---
-
-**Note**: This project is for educational purposes. Ensure compliance with content licensing and terms of service of integrated APIs when deploying to production.
+End of Documentation
+TITLIMOVIES - 2026

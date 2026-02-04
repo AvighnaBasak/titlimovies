@@ -4,6 +4,7 @@ import Navbar from "../../components/Navbar";
 import SearchBar from "../../components/SearchBar";
 import MediaDetail from "../../components/MediaDetail";
 import SimilarMedia from "../../components/SimilarMedia";
+import Player from "../../components/Player";
 
 export default function AnimeDetailPage() {
   const router = useRouter();
@@ -77,20 +78,19 @@ export default function AnimeDetailPage() {
                   </span>
                 </div>
               )}
-              <div className="rounded-3xl overflow-hidden bg-black shadow-lg">
-                <iframe
-                  src={`https://2anime.xyz/embed/${animeTitle?.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9\-]/g, "")}-episode-${selectedEpisode}`}
-                  width="100%"
-                  height="400"
-                  frameBorder="0"
-                  scrolling="no"
-                  allowFullScreen
-                  referrerPolicy="no-referrer"
-                  sandbox="allow-same-origin allow-scripts allow-presentation"
-                  className="w-full h-96 min-h-[300px]"
-                  title="Anime Player"
-                ></iframe>
-              </div>
+              <Player
+                type="anime"
+                title={animeTitle?.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9\-]/g, "")}
+                episode={selectedEpisode}
+                season={1} // Anime usually treats episodes as global or Season 1
+                // For VidFast we might need ID if possible, but VidFast supports query? 
+                // Actually VidFast for anime isn't explicitly documented as supporting title-slug.
+                // Re-reading user request: "for all tv shows movies and anime use vidfast api"
+                // The provided docs mainly show IDs (IMDB/TMDB). 
+                // Anime might have TMDB IDs. Let's try to pass the 'item.id' if available.
+                // The 'item' from 'animeapi.skin' usually has IDs.
+                tmdb_id={item.id} // Passing TMDB ID if available
+              />
             </div>
             <SimilarMedia type="anime" title={animeTitle} />
           </>

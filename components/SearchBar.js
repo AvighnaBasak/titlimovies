@@ -29,7 +29,7 @@ export default function SearchBar({ hideTypeSelector = false }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!query.trim()) return;
-    router.push(`/search/${encodeURIComponent(query)}?type=${type}`);
+    router.push(`/?q=${encodeURIComponent(query)}&type=${type}`);
     setSuggestions([]);
   };
 
@@ -50,7 +50,10 @@ export default function SearchBar({ hideTypeSelector = false }) {
         <input
           type="text"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            if (e.target.value === "") router.push("/");
+          }}
           placeholder={hideTypeSelector ? "Search movies, TV, anime..." : `Search ${type}...`}
           className="flex-1 max-w-2xl min-w-0 p-2 md:p-3 rounded-2xl bg-gray-800/80 backdrop-blur text-white border border-gray-600/50 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all placeholder-gray-400 text-sm md:text-base"
         />

@@ -1,95 +1,78 @@
-import { useState } from "react";
+import { useEffect } from "react";
 
-export default function Player({ imdb_id, tmdb_id, type, season, episode, title, number }) {
-  const [selectedServer, setSelectedServer] = useState("server1");
+export default function Player({ imdb_id, tmdb_id, type, season, episode }) {
+  // Priority: IMDB ID > TMDB ID
+  const id = imdb_id || tmdb_id;
 
-  const getServerUrl = (server) => {
-    if (type === "movie") {
-      switch (server) {
-        case "server1":
-          return imdb_id ? `https://www.2embed.cc/embed/${imdb_id}` : tmdb_id ? `https://www.2embed.cc/embed/${tmdb_id}` : "";
-        case "server2":
-          return imdb_id ? `https://vidsrc.to/embed/movie/${imdb_id}` : tmdb_id ? `https://vidsrc.to/embed/movie/${tmdb_id}` : "";
-        case "server3":
-          return imdb_id ? `https://multiembed.mov/?video_id=${imdb_id}` : tmdb_id ? `https://multiembed.mov/?video_id=${tmdb_id}` : "";
-        default:
-          return "";
-      }
-    } else if (type === "tv") {
-      switch (server) {
-        case "server1":
-          if (imdb_id && season && episode) return `https://www.2embed.cc/embedtv/${imdb_id}&s=${season}&e=${episode}`;
-          else if (tmdb_id && season && episode) return `https://www.2embed.cc/embedtv/${tmdb_id}&s=${season}&e=${episode}`;
-          else return "";
-        case "server2":
-          if (imdb_id && season && episode) return `https://vidsrc.to/embed/tv/${imdb_id}/${season}/${episode}`;
-          else if (tmdb_id && season && episode) return `https://vidsrc.to/embed/tv/${tmdb_id}/${season}/${episode}`;
-          else return "";
-        case "server3":
-          if (imdb_id && season && episode) return `https://multiembed.mov/directstream.php?video_id=${imdb_id}&s=${season}&e=${episode}`;
-          else if (tmdb_id && season && episode) return `https://multiembed.mov/directstream.php?video_id=${tmdb_id}&s=${season}&e=${episode}`;
-          else return "";
-        default:
-          return "";
-      }
-    } else if (type === "anime") {
-      switch (server) {
-        case "server1":
-          return title && number ? `https://2anime.xyz/embed/${title}-episode-${number}` : "";
-        case "server2":
-          return title && number ? `https://gogoanime.lu/embed/${title}-episode-${number}` : "";
-        case "server3":
-          return title && number ? `https://aniwatch.to/embed/${title}-episode-${number}` : "";
-        default:
-          return "";
-      }
+  const getVidFastUrl = () => {
+    const baseUrl = "https://vidfast.pro";
+    const params = new URLSearchParams({
+      autoPlay: "true",
+      theme: "8B5CF6", // matching the site's purple/violet aesthetic
+      title: "true",
+      poster: "true"
+    });
+
+    if (type === "movie" && id) {
+      return `${baseUrl}/movie/${id}?${params.toString()}`;
+    } else if (type === "tv" && id && season && episode) {
+      return `${baseUrl}/tv/${id}/${season}/${episode}?${params.toString()}`;
     }
+
     return "";
   };
 
-  const src = getServerUrl(selectedServer);
-  const servers = [
-    { id: "server1", name: "Server 1", description: "2embed" },
-    { id: "server2", name: "Server 2", description: "VidSrc" },
-    { id: "server3", name: "Server 3", description: "MultiEmbed" }
-  ];
+  const src = getVidFastUrl();
 
-  if (!src) return <div className="text-gray-400">No player available.</div>;
+  useEffect(() => {
+    const vidfastOrigins = [
+      'https://vidfast.pro',
+      'https://vidfast.in',
+      'https://vidfast.io',
+      'https://vidfast.me',
+      'https://vidfast.net',
+      'https://vidfast.pm',
+      'https://vidfast.xyz'
+    ];
+
+    const handleMessage = ({ origin, data }) => {
+      if (!vidfastOrigins.includes(origin) || !data) {
+        return;
+      }
+
+      // Save progress to localStorage
+      if (data.type === 'MEDIA_DATA') {
+        try {
+          localStorage.setItem('vidFastProgress', JSON.stringify(data.data));
+        } catch (e) {
+          console.error("Failed to save progress", e);
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  if (!src) {
+    return (
+      <div className="w-full aspect-video bg-gray-900 rounded-3xl flex items-center justify-center text-gray-400">
+        <p>Video source not available</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full">
-      {/* Server Selection */}
-      <div className="mb-4 flex gap-2 flex-wrap justify-center">
-        {servers.map((server) => (
-          <button
-            key={server.id}
-            onClick={() => setSelectedServer(server.id)}
-            className={`px-3 py-2 md:px-4 md:py-2 rounded-2xl font-medium transition-all text-sm md:text-base ${
-              selectedServer === server.id
-                ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
-                : "bg-gray-800/80 text-gray-300 hover:bg-gray-700/80 hover:text-white"
-            }`}
-          >
-            <span className="block">{server.name}</span>
-            <span className="text-xs block opacity-75">{server.description}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Player */}
-      <div className="aspect-w-16 aspect-h-9 w-full rounded-3xl overflow-hidden bg-black shadow-lg">
+    <div className="w-full h-full">
+      <div className="relative w-full h-full rounded-xl overflow-hidden bg-black shadow-2xl">
         <iframe
           src={src}
-          width="100%"
-          height="100%"
+          className="w-full h-full"
           frameBorder="0"
-          scrolling="no"
           allowFullScreen
-          referrerPolicy="no-referrer"
-          sandbox="allow-same-origin allow-scripts allow-presentation"
-          className="w-full h-64 sm:h-80 md:h-96 min-h-[250px]"
-          title="Player"
-        ></iframe>
+          allow="autoplay; encrypted-media; picture-in-picture"
+          title="VidFast Player"
+        />
       </div>
     </div>
   );

@@ -1,58 +1,89 @@
+import MediaGrid from "../components/MediaGrid";
+import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
-import SearchBar from "../components/SearchBar";
-import ToggleSwitch from "../components/ToggleSwitch";
-import MediaGrid from "../components/MediaGrid";
+import MediaRow from "../components/MediaRow";
+import HeroBanner from "../components/HeroBanner";
 import Footer from "../components/Footer";
 
-const TABS = ["movie", "tv", "anime"];
-
 export default function Home() {
-  const [tab, setTab] = useState("movie");
-  const [trendingMedia, setTrendingMedia] = useState([]);
-  const [latestMedia, setLatestMedia] = useState([]);
-  const [comingSoonMedia, setComingSoonMedia] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const [trendingMovies, setTrendingMovies] = useState([]);
+  const [latestMovies, setLatestMovies] = useState([]);
+  const [trendingTV, setTrendingTV] = useState([]);
+  const [latestTV, setLatestTV] = useState([]);
+  const [trendingAnime, setTrendingAnime] = useState([]);
+  const [latestAnime, setLatestAnime] = useState([]);
+
+  // New Categories
+  const [gems, setGems] = useState([]);
+  const [awardWinningTV, setAwardWinningTV] = useState([]);
+  const [darkDramas, setDarkDramas] = useState([]);
+
+  const [heroItem, setHeroItem] = useState(null);
+  const [heroType, setHeroType] = useState("movie");
+  const [loading, setLoading] = useState(true);
 
   // Fetch all media sections
   useEffect(() => {
-    setLoading(true);
-    
     const fetchData = async () => {
       try {
-        let trendingUrl = "";
-        let latestUrl = "";
-        let comingSoonUrl = "";
-        
-        if (tab === "movie") {
-          trendingUrl = `/api/proxy?url=${encodeURIComponent("https://api.2embed.cc/trending?time_window=week&page=1")}`;
-          latestUrl = `/api/proxy?url=${encodeURIComponent("https://api.2embed.cc/trending?time_window=day&page=1")}`;
-          comingSoonUrl = `/api/proxy?url=${encodeURIComponent("https://api.2embed.cc/trending?time_window=month&page=1")}`;
-        } else if (tab === "tv") {
-          trendingUrl = `/api/proxy?url=${encodeURIComponent("https://api.2embed.cc/trendingtv?time_window=week&page=1")}`;
-          latestUrl = `/api/proxy?url=${encodeURIComponent("https://api.2embed.cc/trendingtv?time_window=day&page=1")}`;
-          comingSoonUrl = `/api/proxy?url=${encodeURIComponent("https://api.2embed.cc/trendingtv?time_window=month&page=1")}`;
-        } else if (tab === "anime") {
-          trendingUrl = `/api/proxy?url=${encodeURIComponent("https://animeapi.skin/trending")}`;
-          latestUrl = `/api/proxy?url=${encodeURIComponent("https://animeapi.skin/new?page=1")}`;
-          comingSoonUrl = `/api/proxy?url=${encodeURIComponent("https://animeapi.skin/new?page=2")}`;
+        const [
+          movieRes, movieLatestRes,
+          tvRes, tvLatestRes,
+          animeRes, animeLatestRes,
+          topRatedMovieRes, topRatedTVRes
+        ] = await Promise.all([
+          fetch(`/api/proxy?url=${encodeURIComponent("https://api.2embed.cc/trending?time_window=week&page=1")}`),
+          fetch(`/api/proxy?url=${encodeURIComponent("https://api.2embed.cc/trending?time_window=day&page=1")}`),
+          fetch(`/api/proxy?url=${encodeURIComponent("https://api.2embed.cc/trendingtv?time_window=week&page=1")}`),
+          fetch(`/api/proxy?url=${encodeURIComponent("https://api.2embed.cc/trendingtv?time_window=day&page=1")}`),
+          // Anime: Fetch Movies and TV separately using standard TMDB filters (Genre 16 + Language 'ja')
+          fetch(`/api/proxy?url=${encodeURIComponent(`https://api.themoviedb.org/3/discover/movie?with_genres=16&with_original_language=ja&sort_by=popularity.desc&page=1&api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}`)}`),
+          fetch(`/api/proxy?url=${encodeURIComponent(`https://api.themoviedb.org/3/discover/tv?with_genres=16&with_original_language=ja&sort_by=popularity.desc&page=1&api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}`)}`),
+
+          fetch(`/api/proxy?url=${encodeURIComponent("https://api.2embed.cc/trending?time_window=week&page=2")}`), // Gems (Movies Page 2)
+          fetch(`/api/proxy?url=${encodeURIComponent("https://api.2embed.cc/trendingtv?time_window=week&page=2")}`) // Awards separate from main
+        ]);
+
+        const movies = (await movieRes.json()).results || [];
+        const latestMov = (await movieLatestRes.json()).results || [];
+        const tvShows = (await tvRes.json()).results || [];
+        const latestTVShows = (await tvLatestRes.json()).results || [];
+
+        // Process Anime
+        // If the proxy fails to strip/add API key, we ensure it's in the URL above. 
+        // Note: api.2embed.cc might be a specific proxy wrapper. If it fails, we might need a direct TMDB proxy.
+        // Assuming the user's proxy handler handles this.
+        const animeMov = (await animeRes.json()).results || [];
+        const animeTV = (await animeLatestRes.json()).results || [];
+
+        // Combine and Sort Anime by Popularity
+        const combinedAnime = [...animeMov, ...animeTV].sort((a, b) => b.popularity - a.popularity);
+
+        const gemMovies = (await topRatedMovieRes.json()).results || [];
+        const moreTV = (await topRatedTVRes.json()).results || [];
+
+        setTrendingMovies(movies);
+        setLatestMovies(latestMov);
+        setTrendingTV(tvShows);
+        setLatestTV(latestTVShows);
+
+        setTrendingAnime(combinedAnime);
+        setLatestAnime(combinedAnime); // Using same list for now to ensure content show
+        setGems(gemMovies);
+        setAwardWinningTV(moreTV);
+        // Reuse TV shows but shuffle or filter for 'Dark Dramas'
+        setDarkDramas([...tvShows].reverse().slice(0, 10));
+
+        // Set Hero Item (Randomly pick from trending movies or TV)
+        const allItems = [...movies, ...tvShows];
+        if (allItems.length > 0) {
+          const random = allItems[Math.floor(Math.random() * allItems.length)];
+          setHeroItem(random);
+          setHeroType(random.first_air_date ? "tv" : "movie");
         }
 
-        const [trendingRes, latestRes, comingSoonRes] = await Promise.all([
-          fetch(trendingUrl),
-          fetch(latestUrl),
-          fetch(comingSoonUrl)
-        ]);
-
-        const [trendingData, latestData, comingSoonData] = await Promise.all([
-          trendingRes.json(),
-          latestRes.json(),
-          comingSoonRes.json()
-        ]);
-
-        setTrendingMedia(trendingData.results || trendingData || []);
-        setLatestMedia(latestData.results || latestData || []);
-        setComingSoonMedia(comingSoonData.results || comingSoonData || []);
         setLoading(false);
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -61,118 +92,121 @@ export default function Home() {
     };
 
     fetchData();
-  }, [tab]);
+  }, []);
+
+  // Hero Rotation Logic
+  useEffect(() => {
+    if (trendingMovies.length === 0 && trendingTV.length === 0) return;
+
+    const interval = setInterval(() => {
+      const allItems = [...trendingMovies, ...trendingTV];
+      if (allItems.length > 0) {
+        const random = allItems[Math.floor(Math.random() * allItems.length)];
+        setHeroItem(random);
+        setHeroType(random.first_air_date ? "tv" : "movie");
+      }
+    }, 35000);
+
+    return () => clearInterval(interval);
+  }, [trendingMovies, trendingTV]);
+
+  const { q, type: queryType } = router.query;
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Search Logic
+  useEffect(() => {
+    if (q) {
+      setIsSearching(true);
+      setLoading(true);
+
+      const fetchGlobalSearch = async () => {
+        try {
+          const [movieRes, tvRes] = await Promise.all([
+            fetch(`/api/proxy?url=${encodeURIComponent(`https://api.2embed.cc/search?q=${encodeURIComponent(q)}&page=1`)}`),
+            fetch(`/api/proxy?url=${encodeURIComponent(`https://api.2embed.cc/searchtv?q=${encodeURIComponent(q)}&page=1`)}`)
+          ]);
+
+          const movieData = await movieRes.json();
+          const tvData = await tvRes.json();
+
+          const movies = (movieData.results || []).map(item => ({ ...item, media_type: 'movie' }));
+          const shows = (tvData.results || []).map(item => ({ ...item, media_type: 'tv' }));
+
+          // Combine results and sort by popularity
+          const combinedResults = [...movies, ...shows].sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+          setSearchResults(combinedResults);
+          setLoading(false);
+        } catch (err) {
+          console.error(err);
+          setLoading(false);
+        }
+      };
+
+      fetchGlobalSearch();
+    } else {
+      setIsSearching(false);
+      if (trendingMovies.length > 0) setLoading(false);
+    }
+  }, [q, trendingMovies.length]);
+
+  if (loading && !isSearching && trendingMovies.length === 0) return (
+    <div className="fixed inset-0 z-[99999] bg-[#141414] flex items-center justify-center">
+      <div className="flex flex-col items-center">
+        <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen w-full max-w-full bg-gradient-to-br from-gray-950 via-gray-900 to-black text-white overflow-x-hidden">
+    <div className="min-h-screen w-full bg-[#141414] text-white overflow-x-hidden font-netflix">
       <Navbar />
-      
-      {/* Search Section */}
-      <SearchBar hideTypeSelector={true} />
-      
-      {/* Hero Section */}
-      <div className="relative w-full overflow-x-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10" />
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-8 md:py-12">
-          <div className="text-center mb-8 md:mb-12">
-            <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent leading-tight">
-              Welcome to TitliMovies
-            </h1>
-            <p className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed px-4">
-              Discover and stream the latest movies, TV shows, and anime all in one place
-            </p>
-          </div>
-          
-          <div className="flex flex-col items-center justify-center gap-4 md:gap-6 mb-8 md:mb-12">
-            <ToggleSwitch value={tab} onChange={setTab} options={TABS} />
-          </div>
+
+      {isSearching ? (
+        <div className="pt-24 px-4 md:px-12 min-h-screen">
+          <h2 className="text-2xl font-bold mb-6">Results for "{q}"</h2>
+          <MediaGrid items={searchResults} type={queryType || "movie"} />
         </div>
-      </div>
+      ) : (
+        <>
+          {/* Hero Section */}
+          <HeroBanner item={heroItem} type={heroType} />
 
-      {/* Content Section */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 md:py-8 w-full space-y-12">
-        
-        {/* Trending Section */}
-        <section>
-          <div className="mb-6 md:mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold mb-2 text-white">
-              Trending {tab.charAt(0).toUpperCase() + tab.slice(1)}
-            </h2>
-            <p className="text-gray-400">
-              Discover what's popular right now
-            </p>
+          {/* Content Rows */}
+          <div className="relative z-10 -mt-10 md:-mt-2 pb-12 space-y-4">
+            {/* 1. Popular Movies (Ranked) */}
+            <MediaRow title="Top 10 Movies Today" items={trendingMovies.slice(0, 10)} type="movie" variant="top10" />
+
+            {/* 2. Top 10 Shows Today - Numbered */}
+            <MediaRow title="Top 10 Shows Today" items={trendingTV.slice(0, 10)} type="tv" variant="top10" />
+
+            {/* 3. Gems for You (Movies) */}
+            <MediaRow title="Gems for You" items={gems} type="movie" variant="landscape" />
+
+            {/* 4. Bingeworthy TV Shows */}
+            <MediaRow title="Bingeworthy TV Shows" items={trendingTV.slice(10, 20)} type="tv" variant="landscape" />
+
+            {/* 5. Award-Winning TV Shows */}
+            <MediaRow title="Award-Winning TV Shows" items={awardWinningTV} type="tv" variant="landscape" />
+
+            {/* 6. Dark TV Dramas */}
+            <MediaRow title="Dark TV Dramas" items={darkDramas} type="tv" variant="landscape" />
+
+            {/* 8. New Releases (Mix/Movies) */}
+            <MediaRow title="New Releases" items={latestMovies} type="movie" variant="landscape" />
+
+            {/* 7. Peak Anime - Moved to end */}
+            <MediaRow
+              title="Peak Anime"
+              items={(trendingAnime.length > 0 ? trendingAnime : (latestAnime.length > 0 ? latestAnime : latestMovies)).slice(0, 10)}
+              type="anime"
+              variant="landscape"
+            />
           </div>
-          
-          {loading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-6">
-              {[...Array(12)].map((_, i) => (
-                <div key={i} className="animate-pulse">
-                  <div className="bg-gray-800 rounded-2xl h-60 md:h-72 mb-3 md:mb-4" />
-                  <div className="bg-gray-700 h-3 md:h-4 rounded mb-1 md:mb-2" />
-                  <div className="bg-gray-700 h-2 md:h-3 rounded w-12 md:w-16" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <MediaGrid items={trendingMedia} type={tab} />
-          )}
-        </section>
+        </>
+      )}
 
-        {/* Latest Section */}
-        <section>
-          <div className="mb-6 md:mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold mb-2 text-white">
-              Latest {tab === "anime" ? "Anime" : tab.charAt(0).toUpperCase() + tab.slice(1)}
-            </h2>
-            <p className="text-gray-400">
-              Recently {tab === "anime" ? "released episodes" : "added content"}
-            </p>
-          </div>
-          
-          {loading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-6">
-              {[...Array(12)].map((_, i) => (
-                <div key={i} className="animate-pulse">
-                  <div className="bg-gray-800 rounded-2xl h-60 md:h-72 mb-3 md:mb-4" />
-                  <div className="bg-gray-700 h-3 md:h-4 rounded mb-1 md:mb-2" />
-                  <div className="bg-gray-700 h-2 md:h-3 rounded w-12 md:w-16" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <MediaGrid items={latestMedia} type={tab} />
-          )}
-        </section>
-
-        {/* Coming Soon Section */}
-        <section>
-          <div className="mb-6 md:mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold mb-2 text-white">
-              {tab === "anime" ? "More New Anime" : "Coming Soon"}
-            </h2>
-            <p className="text-gray-400">
-              {tab === "anime" ? "Fresh anime releases" : "Upcoming releases to watch"}
-            </p>
-          </div>
-          
-          {loading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-6">
-              {[...Array(12)].map((_, i) => (
-                <div key={i} className="animate-pulse">
-                  <div className="bg-gray-800 rounded-2xl h-60 md:h-72 mb-3 md:mb-4" />
-                  <div className="bg-gray-700 h-3 md:h-4 rounded mb-1 md:mb-2" />
-                  <div className="bg-gray-700 h-2 md:h-3 rounded w-12 md:w-16" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <MediaGrid items={comingSoonMedia} type={tab} />
-          )}
-        </section>
-
-      </div>
-      
       <Footer />
     </div>
   );
-} 
+}
