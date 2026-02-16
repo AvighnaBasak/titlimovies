@@ -24,6 +24,34 @@ export default function Home() {
   const [heroType, setHeroType] = useState("movie");
   const [loading, setLoading] = useState(true);
 
+  // New state for Continue Watching
+  const [continueWatching, setContinueWatching] = useState([]);
+
+  // Load Continue Watching from localStorage
+  useEffect(() => {
+    const loadContinueWatching = () => {
+      try {
+        const history = JSON.parse(localStorage.getItem('continueWatching') || '[]');
+        // Filter to only items with valid display data
+        const valid = history.filter(item => item.id && (item.poster_path || item.backdrop_path));
+        console.log('[CW] Loaded', history.length, 'items,', valid.length, 'valid', valid);
+        // Clean up invalid entries from storage
+        if (valid.length !== history.length) {
+          localStorage.setItem('continueWatching', JSON.stringify(valid));
+        }
+        setContinueWatching(valid);
+      } catch (e) {
+        console.error("Failed to load continue watching history", e);
+      }
+    };
+
+    loadContinueWatching();
+
+    // Listen for updates from other components (InfoModal, Player)
+    window.addEventListener('continue-watching-update', loadContinueWatching);
+    return () => window.removeEventListener('continue-watching-update', loadContinueWatching);
+  }, []);
+
   // Fetch all media sections
   useEffect(() => {
     const fetchData = async () => {
@@ -76,12 +104,12 @@ export default function Home() {
         // Reuse TV shows but shuffle or filter for 'Dark Dramas'
         setDarkDramas([...tvShows].reverse().slice(0, 10));
 
-        // Set Hero Item (Randomly pick from trending movies or TV)
-        const allItems = [...movies, ...tvShows];
-        if (allItems.length > 0) {
-          const random = allItems[Math.floor(Math.random() * allItems.length)];
+        // Set Hero Item (Randomly pick from Top 10 Movies Today)
+        const top10 = movies.slice(0, 10);
+        if (top10.length > 0) {
+          const random = top10[Math.floor(Math.random() * top10.length)];
           setHeroItem(random);
-          setHeroType(random.first_air_date ? "tv" : "movie");
+          setHeroType("movie");
         }
 
         setLoading(false);
@@ -94,21 +122,21 @@ export default function Home() {
     fetchData();
   }, []);
 
-  // Hero Rotation Logic
+  // Hero Rotation Logic — only cycles through Top 10 Movies Today
   useEffect(() => {
-    if (trendingMovies.length === 0 && trendingTV.length === 0) return;
+    if (trendingMovies.length === 0) return;
 
     const interval = setInterval(() => {
-      const allItems = [...trendingMovies, ...trendingTV];
-      if (allItems.length > 0) {
-        const random = allItems[Math.floor(Math.random() * allItems.length)];
+      const top10 = trendingMovies.slice(0, 10);
+      if (top10.length > 0) {
+        const random = top10[Math.floor(Math.random() * top10.length)];
         setHeroItem(random);
-        setHeroType(random.first_air_date ? "tv" : "movie");
+        setHeroType("movie");
       }
     }, 35000);
 
     return () => clearInterval(interval);
-  }, [trendingMovies, trendingTV]);
+  }, [trendingMovies]);
 
   const { q, type: queryType } = router.query;
   const [searchResults, setSearchResults] = useState([]);
@@ -122,20 +150,51 @@ export default function Home() {
 
       const fetchGlobalSearch = async () => {
         try {
-          const [movieRes, tvRes] = await Promise.all([
+          // Fetch from both 2embed and TMDB multi-search for better popularity data
+          const [movieRes, tvRes, tmdbRes] = await Promise.all([
             fetch(`/api/proxy?url=${encodeURIComponent(`https://api.2embed.cc/search?q=${encodeURIComponent(q)}&page=1`)}`),
-            fetch(`/api/proxy?url=${encodeURIComponent(`https://api.2embed.cc/searchtv?q=${encodeURIComponent(q)}&page=1`)}`)
+            fetch(`/api/proxy?url=${encodeURIComponent(`https://api.2embed.cc/searchtv?q=${encodeURIComponent(q)}&page=1`)}`),
+            fetch(`/api/proxy?url=${encodeURIComponent(`https://api.themoviedb.org/3/search/multi?query=${encodeURIComponent(q)}&page=1&api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}`)}`)
           ]);
 
           const movieData = await movieRes.json();
           const tvData = await tvRes.json();
+          const tmdbData = await tmdbRes.json();
 
           const movies = (movieData.results || []).map(item => ({ ...item, media_type: 'movie' }));
           const shows = (tvData.results || []).map(item => ({ ...item, media_type: 'tv' }));
 
-          // Combine results and sort by popularity
-          const combinedResults = [...movies, ...shows].sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
-          setSearchResults(combinedResults);
+          // Build a popularity lookup from TMDB multi-search (most reliable popularity scores)
+          const tmdbPopularity = new Map();
+          for (const item of (tmdbData.results || [])) {
+            if (item.media_type === 'movie' || item.media_type === 'tv') {
+              tmdbPopularity.set(item.id, item.popularity || 0);
+            }
+          }
+
+          // Combine 2embed results and enrich with TMDB popularity
+          const combined = [...movies, ...shows].map(item => {
+            const id = item.tmdb_id || item.id;
+            const tmdbPop = tmdbPopularity.get(id);
+            return {
+              ...item,
+              popularity: tmdbPop !== undefined ? tmdbPop : (item.popularity || 0)
+            };
+          });
+
+          // Also add any TMDB-only results not already in 2embed results
+          const existingIds = new Set(combined.map(item => item.tmdb_id || item.id));
+          for (const item of (tmdbData.results || [])) {
+            if ((item.media_type === 'movie' || item.media_type === 'tv') && !existingIds.has(item.id)) {
+              combined.push({ ...item, tmdb_id: item.id });
+              existingIds.add(item.id);
+            }
+          }
+
+          // Sort by popularity descending
+          combined.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+
+          setSearchResults(combined);
           setLoading(false);
         } catch (err) {
           console.error(err);
@@ -159,7 +218,7 @@ export default function Home() {
   );
 
   return (
-    <div className="min-h-screen w-full bg-[#141414] text-white overflow-x-hidden font-netflix">
+    <div className="min-h-screen w-full bg-gradient-to-b from-gray-900 to-black md:bg-[#141414] md:bg-none text-white overflow-x-hidden font-netflix">
       <Navbar />
 
       {isSearching ? (
@@ -170,7 +229,7 @@ export default function Home() {
       ) : (
         <>
           {/* Hero Section */}
-          <HeroBanner item={heroItem} type={heroType} />
+          <HeroBanner item={heroItem} type={heroType} mobileItem={trendingMovies[0]} />
 
           {/* Content Rows */}
           <div className="relative z-10 -mt-10 md:-mt-2 pb-12 space-y-4">
@@ -185,6 +244,9 @@ export default function Home() {
 
             {/* 4. Bingeworthy TV Shows */}
             <MediaRow title="Bingeworthy TV Shows" items={trendingTV.slice(10, 20)} type="tv" variant="landscape" />
+
+            {/* Continue Watching — collapses when empty, expands when items exist */}
+            <MediaRow title="Continue Watching" items={continueWatching} type="mixed" variant="landscape" />
 
             {/* 5. Award-Winning TV Shows */}
             <MediaRow title="Award-Winning TV Shows" items={awardWinningTV} type="tv" variant="landscape" />

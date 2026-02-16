@@ -147,17 +147,100 @@ export default function InfoModal() {
         fetchSeason();
     }, [selectedSeason, details, modalContent]);
 
+    // Resume Logic: Check history when details load
+    useEffect(() => {
+        if (!details || !modalContent) return;
+
+        try {
+            const history = JSON.parse(localStorage.getItem('continueWatching') || '[]');
+            const savedItem = history.find(i => i.id === details.id);
+
+            if (savedItem && (modalContent.type === 'tv' || modalContent.type === 'anime')) {
+                if (savedItem.season) {
+                    setSelectedSeason(savedItem.season);
+                }
+            }
+        } catch (e) {
+            console.error("Failed to load history", e);
+        }
+    }, [details, modalContent]);
+
+    const addToContinueWatching = (season = 1, episode = 1) => {
+        if (!details) return;
+
+        try {
+            const history = JSON.parse(localStorage.getItem('continueWatching') || '[]');
+            const existingIndex = history.findIndex(i => i.id === details.id);
+
+            // Remove existing if found
+            if (existingIndex > -1) {
+                history.splice(existingIndex, 1);
+            }
+
+            const newItem = {
+                id: details.id,
+                tmdb_id: details.id,
+                title: details.title || details.name,
+                name: details.name || details.title,
+                poster_path: details.poster_path,
+                backdrop_path: details.backdrop_path,
+                media_type: modalContent.type || 'movie',
+                season: season,
+                episode: episode,
+                last_watched: Date.now()
+            };
+
+            // Add to front
+            history.unshift(newItem);
+            localStorage.setItem('continueWatching', JSON.stringify(history));
+
+            // Dispatch event for UI updates across components
+            window.dispatchEvent(new Event('continue-watching-update'));
+        } catch (e) {
+            console.error("Failed to save history", e);
+        }
+    };
+
     const handlePlay = () => {
         if (!details) return;
-        // Route to player
-        const target = modalContent.type === 'tv' || modalContent.type === 'anime' ? `/tv/${details.id}` : `/movie/${details.id}`;
-        navigateDelay(target);
+
+        // === SIMPLE SAVE TO CONTINUE WATCHING ===
+        try {
+            const list = JSON.parse(localStorage.getItem('continueWatching') || '[]');
+            // Remove if already exists
+            const filtered = list.filter(i => i.id !== details.id);
+            // Add to front
+            filtered.unshift({
+                id: details.id,
+                title: details.title || details.name,
+                name: details.name || details.title,
+                poster_path: details.poster_path,
+                backdrop_path: details.backdrop_path,
+                media_type: modalContent.type || 'movie',
+                season: selectedSeason || 1,
+                episode: 1,
+                progress: 5,
+                last_watched: Date.now()
+            });
+            localStorage.setItem('continueWatching', JSON.stringify(filtered));
+            console.log('[CW] Saved! List now has', filtered.length, 'items');
+        } catch (e) {
+            console.error('[CW] FAILED to save:', e.message);
+        }
+
+        // Navigate
+        if (modalContent.type === 'tv' || modalContent.type === 'anime') {
+            navigateDelay(`/tv/${details.id}?season=${selectedSeason || 1}&episode=1`);
+        } else {
+            navigateDelay(`/movie/${details.id}`);
+        }
         setTimeout(() => closeModal(), 1000);
     };
 
     const handleEpisodePlay = (epNum) => {
-        // We need to pass season and episode to the player page.
-        // NOTE: This assumes updated TV page logic.
+        // Save progress for this specific episode
+        addToContinueWatching(selectedSeason, epNum);
+
         navigateDelay(`/tv/${details.id}?season=${selectedSeason}&episode=${epNum}`);
         setTimeout(() => closeModal(), 1000);
     };
@@ -166,9 +249,9 @@ export default function InfoModal() {
     if (typeof document === 'undefined') return null;
 
     return createPortal(
-        <div className="fixed inset-0 z-[1000] overflow-y-auto overflow-x-hidden bg-black/70 backdrop-blur-sm flex justify-center items-start pt-8 pb-8 animate-fadeIn" onClick={closeModal}>
+        <div className="fixed inset-0 z-[1000] overflow-y-auto overflow-x-hidden bg-black/70 backdrop-blur-sm flex justify-center items-start pt-0 md:pt-8 pb-0 md:pb-8 animate-fadeIn" onClick={closeModal}>
             <div
-                className="relative w-full max-w-[850px] bg-[#181818] rounded-xl overflow-hidden shadow-2xl origin-top animate-scaleIn mx-0 md:mx-4 mb-0 md:mb-8 pb-12 md:pb-0"
+                className="relative w-full max-w-[850px] bg-[#181818] rounded-none md:rounded-xl overflow-hidden shadow-2xl origin-top animate-scaleIn mx-0 md:mx-4 mb-0 md:mb-8 pb-12 md:pb-0 min-h-screen md:min-h-auto"
                 onClick={e => e.stopPropagation()}
                 style={{ minHeight: '80vh' }}
             >
@@ -203,13 +286,13 @@ export default function InfoModal() {
                                 </div>
                             )}
 
-                            {/* Gradient Overlay */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-[#181818] via-transparent to-transparent z-10"></div>
-                            {/* Explicit Bottom Fade for darker transition */}
-                            <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-[#181818] via-[#181818]/60 to-transparent z-10"></div>
+                            {/* Gradient Overlay (Desktop Only) */}
+                            <div className="hidden md:block absolute inset-0 bg-gradient-to-t from-[#181818] via-transparent to-transparent z-10"></div>
+                            {/* Explicit Bottom Fade (Desktop Only) */}
+                            <div className="hidden md:block absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-[#181818] via-[#181818]/60 to-transparent z-10"></div>
 
-                            {/* Content Overlay */}
-                            <div className="absolute bottom-[5%] left-[5%] right-[5%] z-20">
+                            {/* Content Overlay (Desktop Only) */}
+                            <div className="hidden md:block absolute bottom-[5%] left-[5%] right-[5%] z-20">
                                 <div className="max-w-[70%] md:max-w-[50%]">
                                     {logoPath ? (
                                         <img
@@ -253,8 +336,45 @@ export default function InfoModal() {
                             </div>
                         </div>
 
-                        {/* Main Info */}
-                        <div className="px-4 md:px-10 py-4 grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4 md:gap-8">
+                        {/* Mobile Info Body (Text Title, Buttons, Metadata) */}
+                        <div className="block md:hidden px-4 py-4 space-y-4 bg-[#181818]">
+                            <h1 className="text-2xl font-bold text-white tracking-tight">{details.title || details.name}</h1>
+
+                            <div className="flex items-center flex-wrap gap-3 text-gray-400 text-xs">
+                                <span>{(details.release_date || details.first_air_date || "").substring(0, 4)}</span>
+                                <span className="bg-gray-700 text-white px-1.5 py-0.5 rounded text-[10px]">{details.maturityRating}</span>
+                                <span>{details.formattedRuntime}</span>
+                                <span className="border border-gray-500 px-1.5 py-0.5 rounded text-[10px]">HD</span>
+                            </div>
+
+                            <button
+                                onClick={handlePlay}
+                                className="w-full bg-white text-black font-bold py-3 rounded flex items-center justify-center gap-2 active:scale-95 transition"
+                            >
+                                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                                Play
+                            </button>
+
+                            <button
+                                className="w-full bg-[#262626] text-white font-bold py-3 rounded flex items-center justify-center gap-2 active:scale-95 transition"
+                            >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                                My List
+                            </button>
+
+                            <p className="text-sm text-gray-300 leading-relaxed font-light">
+                                {details.overview}
+                            </p>
+
+                            <div className="text-xs text-gray-400 space-y-1 pt-2">
+                                <p><span className="text-gray-500">Cast: </span>{details.castList.slice(0, 4).join(', ')}... more</p>
+                                <p><span className="text-gray-500">Director: </span>{details.directorsList.join(', ')}</p>
+                                <p><span className="text-gray-500">Writer: </span>{details.writersList.join(', ')}</p>
+                            </div>
+                        </div>
+
+                        {/* Main Info (Desktop) */}
+                        <div className="hidden md:grid px-4 md:px-10 py-4 grid-cols-1 md:grid-cols-[2fr_1fr] gap-4 md:gap-8">
                             {/* Left Column */}
                             <div className="space-y-3 md:space-y-4">
                                 <div className="flex items-center flex-wrap gap-2 md:gap-3 text-white font-semibold text-sm md:text-base">

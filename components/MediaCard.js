@@ -1,80 +1,184 @@
 // components/MediaCard.js
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useModal } from "../context/ModalContext";
 import HoverCard from "./HoverCard";
 
 const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
 
+// Module-level tracker: counts how many times each URL has failed to load.
+// After 5 failures for a given URL, we stop attempting to load it.
+const failedUrls = new Map();
+const MAX_FAILURES = 5;
+
+function isUrlBlocked(url) {
+  return (failedUrls.get(url) || 0) >= MAX_FAILURES;
+}
+
+function recordUrlFailure(url) {
+  const count = (failedUrls.get(url) || 0) + 1;
+  failedUrls.set(url, count);
+  return count;
+}
+
 export default function MediaCard({ item, type, variant = "landscape", rank }) {
   const { openModal } = useModal();
   const [imageSrc, setImageSrc] = useState("/placeholder.png");
   const [loaded, setLoaded] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true); // NEW: track if we're still fetching the first image
+  const errorCountRef = useRef(0);
 
   // Initial Logic: use props if available
   useEffect(() => {
-    let src = "/placeholder.png";
     const useBackdrop = variant === "landscape";
+    errorCountRef.current = 0; // Reset error count on new item/variant
+    setIsInitializing(true); // Reset initializing state on item change
 
-    if (useBackdrop) {
-      if (item.backdrop_path) src = `https://image.tmdb.org/t/p/w500${item.backdrop_path}`;
-      else if (item.bannerImage) src = item.bannerImage;
-      else if (item.image_url) src = item.image_url;
-      else if (item.poster_path) src = `https://image.tmdb.org/t/p/w500${item.poster_path}`;
-    } else {
+    // For vertical (portrait/top10) cards — keep existing behavior
+    if (!useBackdrop) {
+      let src = "/placeholder.png";
       if (item.poster_path) src = `https://image.tmdb.org/t/p/w500${item.poster_path}`;
       else if (item.coverImage?.large) src = item.coverImage.large;
       else if (item.poster) src = item.poster;
       else if (item.image_url) src = item.image_url;
       else if (item.backdrop_path) src = `https://image.tmdb.org/t/p/w500${item.backdrop_path}`;
-    }
 
-    // If we have a valid src from props, set it
-    if (src !== "/placeholder.png") {
-      setImageSrc(src);
-      setLoaded(true);
-    } else {
-      // If missing, try to fetch from TMDB uniquely
-      const fetchTMDBImages = async () => {
-        if (!item.id && !item.tmdb_id) return;
-        try {
-          const id = item.tmdb_id || item.id;
-          // Distinguish endpoint based on type (tv or movie). Anime is tricky, often maps to TV in TMDB.
-          const endpointType = type === 'movie' ? 'movie' : 'tv';
+      if (src !== "/placeholder.png" && !isUrlBlocked(src)) {
+        setImageSrc(src);
+        setLoaded(true);
+        setIsInitializing(false); // Image source found, ready to render
+      } else {
+        // Fallback: fetch from TMDB
+        const fetchTMDBPosters = async () => {
+          if (!item.id && !item.tmdb_id) {
+            setIsInitializing(false);
+            return;
+          }
+          try {
+            const id = item.tmdb_id || item.id;
+            const effectiveType = item.media_type || type || 'movie';
+            const endpointType = effectiveType === 'movie' ? 'movie' : 'tv';
+            const res = await fetch(`https://api.themoviedb.org/3/${endpointType}/${id}/images?api_key=${TMDB_API_KEY}`);
+            const data = await res.json();
 
-          const res = await fetch(`https://api.themoviedb.org/3/${endpointType}/${id}/images?api_key=${TMDB_API_KEY}`);
-          const data = await res.json();
-
-          let newSrc = "/placeholder.png";
-          if (useBackdrop) {
-            if (data.backdrops && data.backdrops.length > 0) {
-              newSrc = `https://image.tmdb.org/t/p/w500${data.backdrops[0].file_path}`;
-            } else if (data.posters && data.posters.length > 0) {
-              newSrc = `https://image.tmdb.org/t/p/w500${data.posters[0].file_path}`;
-            }
-          } else {
+            let newSrc = "/placeholder.png";
             if (data.posters && data.posters.length > 0) {
               newSrc = `https://image.tmdb.org/t/p/w500${data.posters[0].file_path}`;
             } else if (data.backdrops && data.backdrops.length > 0) {
               newSrc = `https://image.tmdb.org/t/p/w500${data.backdrops[0].file_path}`;
             }
+            if (newSrc !== "/placeholder.png" && !isUrlBlocked(newSrc)) {
+              setImageSrc(newSrc);
+              setLoaded(true);
+            }
+            setIsInitializing(false); // Done fetching
+          } catch (err) {
+            console.error("Failed to fetch TMDB image", err);
+            setIsInitializing(false);
           }
-
-          if (newSrc !== "/placeholder.png") {
-            setImageSrc(newSrc);
-          }
-        } catch (err) {
-          console.error("Failed to fetch TMDB image", err);
+        };
+        if (type !== 'anime' || (item.id && !isNaN(item.id))) {
+          fetchTMDBPosters();
+        } else {
+          setIsInitializing(false);
         }
-      };
-
-      // Only fetch if it's likely a standard Movie/TV item (standard numeric ID)
-      if (type !== 'anime' || (item.id && !isNaN(item.id))) {
-        fetchTMDBImages();
       }
+      return;
+    }
+
+    // For horizontal (landscape) cards — fetch backdrop with language cascade:
+    // English → French → no-language (null) → any backdrop → prop fallback
+    const fetchBackdropCascade = async () => {
+      const id = item.tmdb_id || item.id;
+
+      if (!id) {
+        setFallbackLandscape();
+        setIsInitializing(false);
+        return;
+      }
+
+      try {
+        const effectiveType = item.media_type || type || 'movie';
+        const endpointType = effectiveType === 'movie' ? 'movie' : 'tv';
+        // Request en, fr, and null (no language) backdrops in one call
+        const res = await fetch(
+          `https://api.themoviedb.org/3/${endpointType}/${id}/images?api_key=${TMDB_API_KEY}&include_image_language=en,fr,null`
+        );
+        if (!res.ok) {
+          setFallbackLandscape();
+          setIsInitializing(false);
+          return;
+        }
+        const data = await res.json();
+        const allBackdrops = data.backdrops || [];
+
+        // Helper: try to use the first non-blocked backdrop from a filtered list
+        const trySetBackdrop = (list) => {
+          for (const b of list) {
+            const url = `https://image.tmdb.org/t/p/w780${b.file_path}`;
+            if (!isUrlBlocked(url)) {
+              setImageSrc(url);
+              setLoaded(true);
+              setIsInitializing(false); // Image source found
+              return true;
+            }
+          }
+          return false;
+        };
+
+        // 1. Try English
+        const enBackdrops = allBackdrops.filter((b) => b.iso_639_1 === 'en');
+        if (trySetBackdrop(enBackdrops)) return;
+
+        // 2. Try French
+        const frBackdrops = allBackdrops.filter((b) => b.iso_639_1 === 'fr');
+        if (trySetBackdrop(frBackdrops)) return;
+
+        // 3. Try no-language (null)
+        const nullBackdrops = allBackdrops.filter((b) => b.iso_639_1 === null || b.iso_639_1 === '');
+        if (trySetBackdrop(nullBackdrops)) return;
+
+        // 4. Try any remaining backdrop
+        if (trySetBackdrop(allBackdrops)) return;
+
+        // 5. Nothing worked, use prop fallback
+        setFallbackLandscape();
+        setIsInitializing(false);
+      } catch (err) {
+        console.error("Failed to fetch backdrop", err);
+        setFallbackLandscape();
+        setIsInitializing(false);
+      }
+    };
+
+    // Fallback for landscape: use whatever props are available (existing behavior)
+    const setFallbackLandscape = () => {
+      let src = "/placeholder.png";
+      if (item.backdrop_path) src = `https://image.tmdb.org/t/p/w500${item.backdrop_path}`;
+      else if (item.bannerImage) src = item.bannerImage;
+      else if (item.image_url) src = item.image_url;
+      else if (item.poster_path) src = `https://image.tmdb.org/t/p/w500${item.poster_path}`;
+      if (src !== "/placeholder.png" && !isUrlBlocked(src)) {
+        setImageSrc(src);
+        setLoaded(true);
+      }
+    };
+
+    if (type !== 'anime' || (item.id && !isNaN(item.id))) {
+      fetchBackdropCascade();
+    } else {
+      setFallbackLandscape();
+      setIsInitializing(false);
     }
   }, [item, variant, type]);
+
+  // If image fails to load, hide the entire card
+  if (hidden) return null;
+
+  // Don't render until we have an image source (prevents showing placeholder on initial load)
+  if (isInitializing && imageSrc === "/placeholder.png") return null;
 
   const title = item.title || item.name || item.title_en || item.title_jp || "Untitled";
 
@@ -94,10 +198,10 @@ export default function MediaCard({ item, type, variant = "landscape", rank }) {
   // Top 10 Variant
   if (variant === "top10") {
     return (
-      <div className="flex items-end group relative min-w-[180px] md:min-w-[216px] pl-2 md:pl-6">
-        {/* Big Number */}
+      <div className="flex items-end group relative flex-shrink-0 min-w-[110px] md:min-w-max pl-0 md:pl-6">
+        {/* Big Number - Hidden on Mobile */}
         <span
-          className="text-[190px] md:text-[260px] font-black text-black leading-[0.8] -mr-6 md:-mr-10 z-0 select-none tracking-tighter"
+          className="hidden md:block text-[190px] md:text-[260px] font-black text-black leading-[0.8] -mr-6 md:-mr-10 z-0 select-none tracking-tighter"
           style={{
             WebkitTextStroke: "4px #595959",
             fontFamily: "'Netflix Sans', 'Helvetica Neue', sans-serif"
@@ -107,16 +211,30 @@ export default function MediaCard({ item, type, variant = "landscape", rank }) {
         </span>
 
         {/* Poster Container - No Scale on Hover */}
-        <div className="relative w-24 md:w-32 h-36 md:h-48 rounded-md shadow-lg z-10 border border-white/20 bg-gray-900 group-poster cursor-pointer">
+        <div className="relative w-28 md:w-32 h-40 md:h-48 rounded-md shadow-lg z-10 border border-white/20 bg-gray-900 group-poster cursor-pointer">
           <Link href={href} onClick={handleCardClick} className="block w-full h-full relative overflow-hidden rounded-md">
-            <Image
-              src={imageSrc}
-              alt={title}
-              fill
-              className={`object-cover ${imageSrc === "/placeholder.png" ? "opacity-50" : ""}`}
-              loading="lazy"
-              onError={(e) => { e.target.src = "https://via.placeholder.com/300x450?text=No+Poster"; }}
-            />
+            {/* Mobile: Use TMDB poster */}
+            <div className="block md:hidden w-full h-full relative">
+              <Image
+                src={item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : imageSrc}
+                alt={title}
+                fill
+                className={`object-cover ${imageSrc === "/placeholder.png" ? "opacity-50" : ""}`}
+                loading="lazy"
+                onError={() => setHidden(true)}
+              />
+            </div>
+            {/* Desktop: Use existing imageSrc */}
+            <div className="hidden md:block w-full h-full relative">
+              <Image
+                src={imageSrc}
+                alt={title}
+                fill
+                className={`object-cover ${imageSrc === "/placeholder.png" ? "opacity-50" : ""}`}
+                loading="lazy"
+                onError={() => setHidden(true)}
+              />
+            </div>
 
             {/* Recently Added Badge */}
             {(item.release_date || item.first_air_date) &&
@@ -137,22 +255,47 @@ export default function MediaCard({ item, type, variant = "landscape", rank }) {
   }
 
   // Standard Variant (Landscape or Portrait)
-  const aspectClass = variant === "portrait" ? "aspect-[2/3]" : "aspect-video";
-  // If variant is 'grid', we want full width of parent, otherwise fixed for rows
-  const containerClass = variant === "grid" ? "w-full" : (variant === "portrait" ? "w-28 md:w-40" : "w-48 md:w-64");
+  const aspectClass = variant === "portrait" ? "aspect-[2/3]" : "aspect-[2/3] md:aspect-video";
+  // If variant is 'grid', we want full width of parent.
+  // For rows: Mobile always vertical (w-[110px]), Desktop depends on variant.
+  const containerClass = variant === "grid"
+    ? "w-full"
+    : (variant === "portrait" ? "w-28 md:w-40" : "w-[110px] md:w-64");
+
+  // Build a poster-only source for mobile (never use backdrop/banner)
+  const mobilePosterPath = item.poster_path || item.poster;
+  const posterSrc = mobilePosterPath
+    ? (mobilePosterPath.startsWith('http') ? mobilePosterPath : `https://image.tmdb.org/t/p/w500${mobilePosterPath}`)
+    : "/placeholder.png";
 
   return (
-    <div className={`relative ${aspectClass} ${containerClass} group z-0 hover:z-50 transition-all duration-300`}>
+    <div className={`relative flex-shrink-0 ${aspectClass} ${containerClass} group z-0 hover:z-50 transition-all duration-300`}>
       {/* Static Content (Always visible until hovered) */}
       <Link href={href} onClick={handleCardClick} className="absolute inset-0 rounded-md overflow-hidden bg-[#202020] shadow-md cursor-pointer block">
-        <Image
-          src={imageSrc}
-          alt={title}
-          fill
-          className={`object-cover ${imageSrc === "/placeholder.png" ? "opacity-50 grayscale" : ""}`}
-          loading="lazy"
-          onError={(e) => { e.target.src = "https://via.placeholder.com/400x225?text=No+Image"; }}
-        />
+
+        {/* Mobile: Vertical Poster */}
+        <div className="block md:hidden w-full h-full relative">
+          <Image
+            src={posterSrc}
+            alt={title}
+            fill
+            className={`object-cover ${posterSrc === "/placeholder.png" ? "opacity-50 grayscale" : ""}`}
+            loading="lazy"
+            onError={() => setHidden(true)}
+          />
+        </div>
+
+        {/* Desktop: Determine based on variant (Landscape uses backdrop logic) */}
+        <div className="hidden md:block w-full h-full relative">
+          <Image
+            src={imageSrc}
+            alt={title}
+            fill
+            className={`object-cover ${imageSrc === "/placeholder.png" ? "opacity-50 grayscale" : ""}`}
+            loading="lazy"
+            onError={() => setHidden(true)}
+          />
+        </div>
 
         {/* Recently Added Badge */}
         {(item.release_date || item.first_air_date) &&
@@ -162,9 +305,17 @@ export default function MediaCard({ item, type, variant = "landscape", rank }) {
             </div>
           )}
 
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3">
-          <h3 className="text-white text-xs md:text-sm font-bold shadow-black drop-shadow-md leading-tight">{title}</h3>
-        </div>
+        {/* Progress Bar for Continue Watching */}
+        {item.progress > 0 && item.progress < 100 && (
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-600 z-10 w-full">
+            <div
+              className="h-full bg-red-600"
+              style={{ width: `${item.progress}%` }}
+            />
+          </div>
+        )}
+
+
       </Link>
 
       {/* Hover Card Overlay */}

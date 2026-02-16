@@ -16,11 +16,14 @@ export default function MediaRow({ title, items, type, variant = "landscape" }) 
         }
     };
 
-    if (!items || items.length === 0) return null;
+    // If empty, render a collapsed invisible container (keeps component mounted)
+    if (!items || items.length === 0) {
+        return <div style={{ width: '1px', height: '0px', overflow: 'hidden' }} />;
+    }
 
     return (
         <div className="space-y-1 md:space-y-2 my-2 pl-2 md:pl-12 group relative">
-            <h2 className="text-lg md:text-2xl font-semibold text-white/90 hover:text-white transition duration-200 cursor-pointer">
+            <h2 className="text-lg md:text-2xl font-semibold text-white/90 hover:text-white transition duration-200 cursor-pointer pl-2 md:pl-4">
                 {title}
             </h2>
 
@@ -36,20 +39,16 @@ export default function MediaRow({ title, items, type, variant = "landscape" }) 
                 {/* Scroll Container */}
                 <div
                     ref={rowRef}
-                    className={`flex items-center ${variant === 'top10' ? 'gap-2' : 'gap-2 md:gap-4'} overflow-x-scroll overflow-y-hidden no-scrollbar scroll-smooth pb-4 md:pb-8 px-2 md:px-4`}
+                    className={`flex items-center ${variant === 'top10' ? 'gap-2' : 'gap-2 md:gap-2'} overflow-x-scroll overflow-y-hidden no-scrollbar scroll-smooth pb-4 md:pb-8 px-2 md:px-4`}
                 >
                     {items.map((item, idx) => (
-                        <div
+                        <MediaCard
                             key={item.id || item.imdb_id || idx}
-                            className={`flex-shrink-0 ${variant === 'top10' ? 'min-w-[130px] md:min-w-max' : 'min-w-[110px] md:min-w-[216px]'}`}
-                        >
-                            <MediaCard
-                                item={item}
-                                type={type}
-                                variant={variant}
-                                rank={idx + 1}
-                            />
-                        </div>
+                            item={item}
+                            type={type}
+                            variant={variant}
+                            rank={idx + 1}
+                        />
                     ))}
                 </div>
 

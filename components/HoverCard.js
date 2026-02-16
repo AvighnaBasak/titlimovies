@@ -28,8 +28,34 @@ export default function HoverCard({ item, type, imageSrc }) {
     else if (type === "tv") watchUrl = `/tv/${item.imdb_id || item.id}`;
     else if (type === "anime") watchUrl = `/anime/${encodeURIComponent(title)}`;
 
+    // Save to Continue Watching in localStorage
+    const saveToContinueWatching = () => {
+        try {
+            const list = JSON.parse(localStorage.getItem('continueWatching') || '[]');
+            const filtered = list.filter(i => String(i.id) !== String(item.id));
+            filtered.unshift({
+                id: item.id,
+                title: item.title || item.name,
+                name: item.name || item.title,
+                poster_path: item.poster_path,
+                backdrop_path: item.backdrop_path,
+                media_type: type || item.media_type || 'movie',
+                season: 1,
+                episode: 1,
+                progress: 5,
+                last_watched: Date.now()
+            });
+            localStorage.setItem('continueWatching', JSON.stringify(filtered));
+            window.dispatchEvent(new Event('continue-watching-update'));
+            console.log('[CW] Saved from HoverCard!', filtered.length, 'items');
+        } catch (e) {
+            console.error('[CW] Failed to save:', e);
+        }
+    };
+
     const handlePlay = (e) => {
-        e.stopPropagation(); // Prevent bubbling
+        e.stopPropagation();
+        saveToContinueWatching();
         navigateDelay(watchUrl);
     };
 
@@ -103,7 +129,7 @@ export default function HoverCard({ item, type, imageSrc }) {
                 }}
                 onMouseEnter={handlePortalMouseEnter}
                 onMouseLeave={handleMouseLeave}
-                onClick={(e) => { e.stopPropagation(); navigateDelay(watchUrl); }}
+                onClick={(e) => { e.stopPropagation(); saveToContinueWatching(); navigateDelay(watchUrl); }}
             >
                 {/* Media Top Half */}
                 <div className="relative w-full aspect-video bg-black">
@@ -130,6 +156,28 @@ export default function HoverCard({ item, type, imageSrc }) {
                         <button className="w-10 h-10 rounded-full border-2 border-gray-500 text-white flex items-center justify-center hover:border-white hover:bg-white/10 transition scale-100 hover:scale-110 cursor-pointer">
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
                         </button>
+                        {/* Remove from Continue Watching — only shows for CW items */}
+                        {item.last_watched && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    try {
+                                        const list = JSON.parse(localStorage.getItem('continueWatching') || '[]');
+                                        const filtered = list.filter(i => String(i.id) !== String(item.id));
+                                        localStorage.setItem('continueWatching', JSON.stringify(filtered));
+                                        window.dispatchEvent(new Event('continue-watching-update'));
+                                        setIsHovered(false);
+                                        setPosition(null);
+                                    } catch (err) {
+                                        console.error('[CW] Failed to remove:', err);
+                                    }
+                                }}
+                                className="w-10 h-10 rounded-full border-2 border-gray-500 text-white flex items-center justify-center hover:border-red-500 hover:bg-red-500/20 hover:text-red-400 transition scale-100 hover:scale-110 cursor-pointer"
+                                title="Remove from Continue Watching"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                        )}
                         <button className="w-10 h-10 rounded-full border-2 border-gray-500 text-white flex items-center justify-center hover:border-white hover:bg-white/10 transition scale-100 hover:scale-110 cursor-pointer">
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" /></svg>
                         </button>

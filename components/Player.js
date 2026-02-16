@@ -43,7 +43,29 @@ export default function Player({ imdb_id, tmdb_id, type, season, episode }) {
       // Save progress to localStorage
       if (data.type === 'MEDIA_DATA') {
         try {
-          localStorage.setItem('vidFastProgress', JSON.stringify(data.data));
+          const progressData = data.data;
+          // Save VidFast specific progress
+          localStorage.setItem('vidFastProgress', JSON.stringify(progressData));
+
+          // UPDATE CONTINUE WATCHING
+          // Calculate if finished ( > 90% watched)
+          const isFinished = (progressData.time / progressData.duration) > 0.90;
+
+          const history = JSON.parse(localStorage.getItem('continueWatching') || '[]');
+          const itemIndex = history.findIndex(i => i.id == id); // Loose equality for string/number match
+
+          if (itemIndex > -1) {
+            if (isFinished) {
+              // Remove if finished
+              history.splice(itemIndex, 1);
+            } else {
+              // Update last watched timestamp & progress for the UI bar
+              history[itemIndex].last_watched = Date.now();
+              history[itemIndex].progress = (progressData.time / progressData.duration) * 100; // Save as percentage (0-100)
+            }
+            localStorage.setItem('continueWatching', JSON.stringify(history));
+            window.dispatchEvent(new Event('continue-watching-update'));
+          }
         } catch (e) {
           console.error("Failed to save progress", e);
         }
@@ -76,4 +98,4 @@ export default function Player({ imdb_id, tmdb_id, type, season, episode }) {
       </div>
     </div>
   );
-} 
+}

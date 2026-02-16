@@ -32,10 +32,10 @@ export default function Navbar() {
 
   return (
     <nav
-      className={`fixed top-0 w-full z-50 transition-colors duration-500 ease-in-out ${isScrolled ? "bg-[#141414]" : "bg-gradient-to-b from-black/80 to-transparent"
+      className={`fixed top-0 w-full z-50 transition-all duration-500 ease-in-out ${isScrolled ? "bg-[#141414]/80 md:bg-[#141414] backdrop-blur-md md:backdrop-blur-none shadow-lg" : "bg-gradient-to-b from-black/80 to-transparent"
         }`}
     >
-      <div className="flex items-center justify-between px-2 md:px-12 py-2 md:py-4">
+      <div className="flex items-center justify-between px-4 md:px-12 py-3 md:py-4">
         {/* Left: Logo & Links */}
         <div className="flex items-center gap-4 md:gap-8">
           <Link href="/">
@@ -53,11 +53,11 @@ export default function Navbar() {
         </div>
 
         {/* Right: Search & Profile */}
-        <div className="flex items-center gap-2 md:gap-6">
+        <div className="flex items-center gap-4 md:gap-6">
           {/* Search Bar */}
-          <div className={`flex items-center border-white transition-all duration-300 ${showSearch ? "border p-1 pl-2 bg-black/50 absolute right-16 md:static" : "border-0"}`}>
+          <div className={`flex items-center border-white transition-all duration-300 ${showSearch ? "border p-1 pl-2 bg-black/50 absolute right-4 md:static z-50" : "border-0"}`}>
             <button onClick={() => setShowSearch(!showSearch)}>
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5 md:w-6 md:h-6 text-white">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-6 h-6 text-white">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
               </svg>
             </button>
@@ -79,19 +79,19 @@ export default function Navbar() {
 
           <span className="cursor-pointer text-gray-300 hover:text-white hidden lg:block">Butterfly</span>
 
-          {/* Bell Icon */}
-          <button className="text-white hover:text-gray-300">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="w-5 h-5 md:w-6 md:h-6">
+          {/* Bell Icon - Desktop Only */}
+          <button className="text-white hover:text-gray-300 hidden md:block">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="w-6 h-6">
               <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z" />
             </svg>
           </button>
 
-          {/* Profile Avatar */}
-          <div className="flex items-center gap-2 cursor-pointer group relative">
-            <div className="w-6 h-6 md:w-8 md:h-8 rounded bg-purple-600 flex items-center justify-center text-white font-bold text-xs md:text-base">
+          {/* Profile Avatar - Desktop Only */}
+          <div className="hidden md:flex items-center gap-2 cursor-pointer group relative">
+            <div className="w-8 h-8 rounded bg-purple-600 flex items-center justify-center text-white font-bold">
               T
             </div>
-            <svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24" className="w-3 h-3 md:w-4 md:h-4 transition-transform group-hover:rotate-180">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24" className="w-4 h-4 transition-transform group-hover:rotate-180">
               <path d="M7 10l5 5 5-5z" />
             </svg>
           </div>

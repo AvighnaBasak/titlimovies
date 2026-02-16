@@ -1,4 +1,4 @@
-TITLIMOVIES
+TITLIMOVIES 
 
 Welcome to the comprehensive documentation for TITLIMOVIES.
 
@@ -25,6 +25,7 @@ TABLE OF CONTENTS
     12.5. Search Functionality
     12.6. Responsive Design Strategy
     12.7. Transition and Animation System
+    12.8. Continue Watching System
 13. Component Documentation
     13.1. Core Components
     13.2. Page Components
@@ -88,7 +89,7 @@ Styling:
 - Custom CSS: Used for specific animations (keyframes) and scrollbar customizations that require fine grained control beyond utility classes.
 
 State Management:
-- React Context API: Used for global state needs such as the modal visibility, page transitions, and theme management.
+- React Context API: Used for global state needs such as the modal visibility, page transitions, continue watching persistence, and theme management.
 - React Hooks: Extensive use of useState, useEffect, useCallback, and custom hooks for component level logic.
 
 Data Fetching:
@@ -109,7 +110,7 @@ The application follows a modular component based architecture.
 
 - Pages: Top level components that correspond to routes (Home, Movie Details, TV Details, Anime).
 - Components: Reusable UI blocks (Hero, Cards, Modals, Navbar).
-- Contexts: Wrappers that provide global functionality (Transition, Modal) to the component tree.
+- Contexts: Wrappers that provide global functionality (Transition, Modal, Continue Watching) to the component tree.
 - Styles: Global stylesheets and utility configurations.
 
 Data Flow:
@@ -140,6 +141,7 @@ The project directory is organized to promote separation of concerns and maintai
 |   |-- Spinner.js       # Loading state indicator
 |
 |-- context/             # Global React Context definitions
+|   |-- ContinueWatchingContext.js # Manages Continue Watching state and localStorage sync
 |   |-- ModalContext.js      # Manages the open/closed state of InfoModal
 |   |-- TransitionContext.js # Manages page transition animations
 |
@@ -153,10 +155,11 @@ The project directory is organized to promote separation of concerns and maintai
 |   |-- tv/              # TV Show specific routes
 |   |   |-- [id].js      # Dynamic route for TV playback/details
 |   |-- _app.js          # Root application wrapper
-|   |-- _document.js     # Document structure (head, body)
+|   |-- _document.js     # Document structure (head, body, favicon)
 |   |-- index.js         # The Homepage
 |
 |-- public/              # Static assets (images, favicon)
+|   |-- favicon.png      # Custom site favicon
 |-- styles/              # CSS files
 |   |-- globals.css      # Main stylesheet with Tailwind imports
 |
@@ -252,11 +255,13 @@ The Hero Banner is the centerpiece of the homepage.
 - Mobile Logic: The layout aggressively adapts for mobile, shifting content vertically to ensure buttons are reachable and visible.
 
 12.2. CONTENT BROWSING AND LAYOUTS
-- Media Rows: Content is organized in horizontally scrolling rails.
-- Media Cards: Each item uses a sophisticated card component.
+- Media Rows: Content is organized in horizontally scrolling rails. Rows automatically collapse to an invisible 1px container when empty, preserving component state without showing empty titles or padding.
+- Media Cards: Each item uses a sophisticated card component with `flex-shrink-0` sizing.
     - Top 10 Variant: Special large numbering styling for top trending content.
     - Standard Variant: Used for general categories.
+    - Progress Bar: Cards in the Continue Watching row display a red progress bar at the bottom indicating watch completion percentage.
 - Hover Effects: On desktop, hovering a card expands it to show a preview trailer, genres, and metadata (HoverCard component).
+    - Continue Watching items display an additional X (remove) button that turns red on hover. Clicking it removes the item from the watchlist instantly.
 
 12.3. MODAL INTERFACE ARCHITECTURE
 We utilize a React Portal based modal system (`InfoModal.js`) that renders outside the main DOM hierarchy to ensure it layers correctly over all other content.
@@ -268,6 +273,7 @@ We utilize a React Portal based modal system (`InfoModal.js`) that renders outsi
 The application integrates with external player sources.
 - Logic: The `Player.js` component constructs URLs based on TMDB IDs.
 - Deep Linking: Supports specific season and episode parameters for TV shows.
+- Progress Tracking: The Player listens for `MEDIA_DATA` messages from the VidFast iframe and calculates watch percentage. Progress is saved to the Continue Watching list in localStorage. Items watched past 90% are automatically removed from the list.
 
 12.5. SEARCH FUNCTIONALITY
 - Global Search: Located in the Navbar.
@@ -284,6 +290,21 @@ TITLIMOVIES is built with a mobile first mindset but polished for desktop 4K scr
 - Custom Context: `TransitionContext.js` manages page navigation.
 - Effect: When a user clicks a link, the app orchestrates a fade out animation, waits for it to complete, navigates, and then fades the new page in.
 - Purpose: This creates a cinematic, "app like" feel rather than a jarring web page reload.
+
+12.8. CONTINUE WATCHING SYSTEM
+TITLIMOVIES tracks what media the user has started watching and displays it in a dedicated "Continue Watching" row on the homepage.
+
+- Data Persistence: Items are stored in `localStorage` under the key `continueWatching` as a JSON array.
+- Save Points: Data is saved from two entry points to ensure reliability:
+    - `InfoModal.js`: When the user clicks Play from the modal.
+    - `HoverCard.js`: When the user clicks Play or the card itself from the desktop hover preview.
+- Data Schema: Each entry stores: `id`, `tmdb_id`, `title`, `name`, `poster_path`, `backdrop_path`, `media_type`, `season`, `episode`, `progress`, and `last_watched` timestamp.
+- Real Time Updates: A custom `continue-watching-update` event is dispatched whenever the list changes. The homepage listens for this event and refreshes the row instantly.
+- Image Loading: Continue Watching cards use the same TMDB backdrop cascade (English > French > null > any) as all other rows for consistent banner quality.
+- Data Validation: On load, the homepage filters out invalid entries (missing `id` or image paths) and cleans up localStorage automatically.
+- Auto Removal: Items watched past 90% are automatically removed by the Player component.
+- Manual Removal: A dedicated X button appears on hover cards for Continue Watching items, allowing manual removal.
+- Empty State: When the list is empty, the row collapses to a 1px invisible container (no title, no padding), keeping the component mounted for instant updates when new items are added.
 
 13. COMPONENT DOCUMENTATION
 
@@ -314,6 +335,11 @@ TITLIMOVIES is built with a mobile first mindset but polished for desktop 4K scr
 - TransitionProvider:
   - State: `isTransitioning`, `opacity`.
   - Exports: `navigateDelay(url)` which handles the timing of route changes.
+- ContinueWatchingProvider (available but not currently wrapped in _app.js):
+  - State: `items` (array of watched media).
+  - Exports: `addItem(item)`, `removeItem(id)`, `updateProgress(id, progress)`.
+  - Auto syncs to localStorage on every state change.
+  - Note: The current implementation uses direct localStorage reads/writes with custom events for cross-component communication.
 
 14. API INTEGRATION STRATEGY
 
@@ -334,6 +360,7 @@ To avoid CORS issues and obscure API keys (partially), the application uses Next
 We deliberately avoid heavy state libraries like Redux to keep the bundle size small.
 - Local State: Used for form inputs, loading spinners, and component specific visibility.
 - Context State: Used for application wide concerns (Modal, Page Transitions).
+- localStorage State: Used for persisting Continue Watching data across sessions. Changes are communicated via custom DOM events (`continue-watching-update`).
 - URL State: The URL is treated as a source of truth for searches (`?q=...`) and direct content access (`/movie/123`), ensuring shareability.
 
 16. DEPLOYMENT GUIDE
