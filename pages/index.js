@@ -27,6 +27,13 @@ export default function Home() {
   // New state for Continue Watching
   const [continueWatching, setContinueWatching] = useState([]);
 
+  // Region-based Top 10 & Award-Winning Dramas
+  const [userRegion, setUserRegion] = useState({ code: 'US', name: 'the US' });
+  const [regionTop10, setRegionTop10] = useState([]);
+  const [awardDramas, setAwardDramas] = useState([]);
+  const [sciFiFantasy, setSciFiFantasy] = useState([]);
+  const [crimeShows, setCrimeShows] = useState([]);
+
   // Load Continue Watching from localStorage
   useEffect(() => {
     const loadContinueWatching = () => {
@@ -52,6 +59,48 @@ export default function Home() {
     return () => window.removeEventListener('continue-watching-update', loadContinueWatching);
   }, []);
 
+  // Detect user region via IP geolocation
+  useEffect(() => {
+    const detectRegion = async () => {
+      try {
+        const res = await fetch('https://ipapi.co/json/');
+        const data = await res.json();
+        if (data.country_code && data.country_name) {
+          setUserRegion({ code: data.country_code, name: data.country_name });
+        }
+      } catch (e) {
+        console.error('Region detection failed, using default US', e);
+      }
+    };
+    detectRegion();
+  }, []);
+
+  // Fetch region-specific Top 10 and Award-Winning TV Dramas
+  useEffect(() => {
+    const fetchRegionData = async () => {
+      try {
+        const api_key = process.env.NEXT_PUBLIC_TMDB_API_KEY;
+        const [regionRes, dramasRes, sciFiRes, crimeRes] = await Promise.all([
+          fetch(`/api/proxy?url=${encodeURIComponent(`https://api.themoviedb.org/3/movie/popular?region=${userRegion.code}&api_key=${api_key}&page=1`)}`),
+          fetch(`/api/proxy?url=${encodeURIComponent(`https://api.themoviedb.org/3/discover/tv?with_genres=18&sort_by=vote_average.desc&vote_count.gte=500&api_key=${api_key}&page=1`)}`),
+          fetch(`/api/proxy?url=${encodeURIComponent(`https://api.themoviedb.org/3/discover/tv?with_genres=10765&sort_by=popularity.desc&vote_count.gte=200&api_key=${api_key}&page=1`)}`),
+          fetch(`/api/proxy?url=${encodeURIComponent(`https://api.themoviedb.org/3/discover/tv?with_genres=80&with_origin_country=US&sort_by=popularity.desc&vote_count.gte=100&api_key=${api_key}&page=1`)}`)
+        ]);
+        const regionData = await regionRes.json();
+        const dramasData = await dramasRes.json();
+        const sciFiData = await sciFiRes.json();
+        const crimeData = await crimeRes.json();
+        setRegionTop10((regionData.results || []).slice(0, 10));
+        setAwardDramas((dramasData.results || []).slice(0, 10));
+        setSciFiFantasy((sciFiData.results || []).slice(0, 20));
+        setCrimeShows((crimeData.results || []).slice(0, 20));
+      } catch (e) {
+        console.error('Failed to fetch region/dramas data', e);
+      }
+    };
+    fetchRegionData();
+  }, [userRegion]);
+
   // Fetch all media sections
   useEffect(() => {
     const fetchData = async () => {
@@ -59,17 +108,16 @@ export default function Home() {
         const [
           movieRes, movieLatestRes,
           tvRes, tvLatestRes,
-          animeRes, animeLatestRes,
+          animeRes, animeRes2,
           topRatedMovieRes, topRatedTVRes
         ] = await Promise.all([
           fetch(`/api/proxy?url=${encodeURIComponent("https://api.2embed.cc/trending?time_window=week&page=1")}`),
           fetch(`/api/proxy?url=${encodeURIComponent("https://api.2embed.cc/trending?time_window=day&page=1")}`),
           fetch(`/api/proxy?url=${encodeURIComponent("https://api.2embed.cc/trendingtv?time_window=week&page=1")}`),
           fetch(`/api/proxy?url=${encodeURIComponent("https://api.2embed.cc/trendingtv?time_window=day&page=1")}`),
-          // Anime: Fetch Movies and TV separately using standard TMDB filters (Genre 16 + Language 'ja')
-          fetch(`/api/proxy?url=${encodeURIComponent(`https://api.themoviedb.org/3/discover/movie?with_genres=16&with_original_language=ja&sort_by=popularity.desc&page=1&api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}`)}`),
-          fetch(`/api/proxy?url=${encodeURIComponent(`https://api.themoviedb.org/3/discover/tv?with_genres=16&with_original_language=ja&sort_by=popularity.desc&page=1&api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}`)}`),
-
+          // Peak Anime: Acclaimed + Famous using TMDB discover with strict quality filters (2 pages)
+          fetch(`/api/proxy?url=${encodeURIComponent(`https://api.themoviedb.org/3/discover/tv?with_genres=16&with_original_language=ja&sort_by=vote_average.desc&vote_count.gte=1000&vote_average.gte=8&page=1&api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}`)}`),
+          fetch(`/api/proxy?url=${encodeURIComponent(`https://api.themoviedb.org/3/discover/tv?with_genres=16&with_original_language=ja&sort_by=vote_average.desc&vote_count.gte=1000&vote_average.gte=8&page=2&api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}`)}`),
           fetch(`/api/proxy?url=${encodeURIComponent("https://api.2embed.cc/trending?time_window=week&page=2")}`), // Gems (Movies Page 2)
           fetch(`/api/proxy?url=${encodeURIComponent("https://api.2embed.cc/trendingtv?time_window=week&page=2")}`) // Awards separate from main
         ]);
@@ -79,15 +127,27 @@ export default function Home() {
         const tvShows = (await tvRes.json()).results || [];
         const latestTVShows = (await tvLatestRes.json()).results || [];
 
-        // Process Anime
-        // If the proxy fails to strip/add API key, we ensure it's in the URL above. 
-        // Note: api.2embed.cc might be a specific proxy wrapper. If it fails, we might need a direct TMDB proxy.
-        // Assuming the user's proxy handler handles this.
-        const animeMov = (await animeRes.json()).results || [];
-        const animeTV = (await animeLatestRes.json()).results || [];
+        // Process Peak Anime with Bayesian Weighted Rating
+        const peakAnimeRaw = [
+          ...((await animeRes.json()).results || []),
+          ...((await animeRes2.json()).results || [])
+        ];
 
-        // Combine and Sort Anime by Popularity
-        const combinedAnime = [...animeMov, ...animeTV].sort((a, b) => b.popularity - a.popularity);
+        // Bayesian Rating: WR = (v/(v+m)) * R + (m/(v+m)) * C
+        // m = minimum votes required (1000), C = mean vote across results
+        const m = 1000;
+        const C = peakAnimeRaw.length > 0
+          ? peakAnimeRaw.reduce((sum, a) => sum + (a.vote_average || 0), 0) / peakAnimeRaw.length
+          : 7;
+
+        const peakAnime = peakAnimeRaw
+          .map(anime => {
+            const v = anime.vote_count || 0;
+            const R = anime.vote_average || 0;
+            const weightedRating = (v / (v + m)) * R + (m / (v + m)) * C;
+            return { ...anime, weightedRating, media_type: 'tv' };
+          })
+          .sort((a, b) => b.weightedRating - a.weightedRating);
 
         const gemMovies = (await topRatedMovieRes.json()).results || [];
         const moreTV = (await topRatedTVRes.json()).results || [];
@@ -97,8 +157,8 @@ export default function Home() {
         setTrendingTV(tvShows);
         setLatestTV(latestTVShows);
 
-        setTrendingAnime(combinedAnime);
-        setLatestAnime(combinedAnime); // Using same list for now to ensure content show
+        setTrendingAnime(peakAnime);
+        setLatestAnime(peakAnime);
         setGems(gemMovies);
         setAwardWinningTV(moreTV);
         // Reuse TV shows but shuffle or filter for 'Dark Dramas'
@@ -232,7 +292,7 @@ export default function Home() {
           <HeroBanner item={heroItem} type={heroType} mobileItem={trendingMovies[0]} />
 
           {/* Content Rows */}
-          <div className="relative z-10 -mt-10 md:-mt-2 pb-12 space-y-4">
+          <div className="relative z-10 -mt-10 md:-mt-2 pb-12 space-y-[2px] md:space-y-4">
             {/* 1. Popular Movies (Ranked) */}
             <MediaRow title="Top 10 Movies Today" items={trendingMovies.slice(0, 10)} type="movie" variant="top10" />
 
@@ -260,10 +320,32 @@ export default function Home() {
             {/* 7. Peak Anime - Moved to end */}
             <MediaRow
               title="Peak Anime"
-              items={(trendingAnime.length > 0 ? trendingAnime : (latestAnime.length > 0 ? latestAnime : latestMovies)).slice(0, 10)}
+              items={trendingAnime.length > 0 ? trendingAnime : (latestAnime.length > 0 ? latestAnime : latestMovies)}
               type="anime"
               variant="landscape"
             />
+
+            {/* 9. Top 10 Movies in Region — Mobile: numbered, Desktop: landscape banners */}
+            <div className="md:hidden">
+              <MediaRow title={`Top 10 Movies in ${userRegion.name} Today`} items={regionTop10} type="movie" variant="top10mobile" />
+            </div>
+            <div className="hidden md:block">
+              <MediaRow title={`Top 10 Movies in ${userRegion.name} Today`} items={regionTop10} type="movie" variant="landscape" />
+            </div>
+
+            {/* 10. Award-Winning TV Dramas — Mobile: showcase, Desktop: landscape banners */}
+            <div className="md:hidden">
+              <MediaRow title="Award-Winning TV Dramas" items={awardDramas} type="tv" variant="showcase" />
+            </div>
+            <div className="hidden md:block">
+              <MediaRow title="Award-Winning TV Dramas" items={awardDramas} type="tv" variant="landscape" />
+            </div>
+
+            {/* 11. Bingeworthy TV Sci-Fi & Fantasy */}
+            <MediaRow title="Bingeworthy TV Sci-Fi & Fantasy" items={sciFiFantasy} type="tv" variant="landscape" />
+
+            {/* 12. US Criminal Investigation TV Shows */}
+            <MediaRow title="US Criminal Investigation TV Shows" items={crimeShows} type="tv" variant="landscape" />
           </div>
         </>
       )}

@@ -11,6 +11,27 @@ export default function HeroBanner({ item, type, mobileItem }) {
     const { navigateDelay } = useTransition();
     const [videoKey, setVideoKey] = useState(null);
     const [logoPath, setLogoPath] = useState(null);
+    const [mobileKeywords, setMobileKeywords] = useState([]);
+
+    // Fetch keywords for mobile hero item
+    useEffect(() => {
+        if (!mobileItem) return;
+        const fetchKeywords = async () => {
+            const api_key = process.env.NEXT_PUBLIC_TMDB_API_KEY;
+            const id = mobileItem.tmdb_id || mobileItem.id;
+            if (!id) return;
+            const mediaType = mobileItem.media_type === 'tv' || mobileItem.first_air_date ? 'tv' : 'movie';
+            try {
+                const res = await fetch(`https://api.themoviedb.org/3/${mediaType}/${id}/keywords?api_key=${api_key}`);
+                const data = await res.json();
+                const keywords = data.keywords || data.results || [];
+                setMobileKeywords(keywords.slice(0, 3).map(k => k.name));
+            } catch (e) {
+                console.error('Failed to fetch keywords', e);
+            }
+        };
+        fetchKeywords();
+    }, [mobileItem]);
 
     // Fetch Video & Logo Logic (Desktop Only)
     useEffect(() => {
@@ -181,7 +202,10 @@ export default function HeroBanner({ item, type, mobileItem }) {
                     <div className="absolute top-16 left-1/2 -translate-x-1/2 w-3/4 h-1/2 bg-purple-900/40 blur-[80px] rounded-full pointer-events-none" />
 
                     {/* Floating Card - ADJUST SIZE HERE: mx-5 sets even margins, aspect-[2/3] keeps poster ratio */}
-                    <div className="relative mx-5 aspect-[2/3] rounded-2xl overflow-hidden border border-white/20 shadow-2xl group">
+                    <div
+                        className="relative mx-5 aspect-[2/3] rounded-2xl overflow-hidden border border-white/20 shadow-2xl group cursor-pointer"
+                        onClick={() => openModal(mobileItem, mobileItem.media_type || (mobileItem.first_air_date ? 'tv' : 'movie'))}
+                    >
                         {/* Poster Image */}
                         <div
                             className="absolute inset-0 bg-cover bg-center"
@@ -193,16 +217,28 @@ export default function HeroBanner({ item, type, mobileItem }) {
                         <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-transparent opacity-60" />
 
                         {/* Content */}
-                        <div className="absolute bottom-0 w-full p-5 flex flex-col gap-4">
+                        <div className="absolute bottom-0 w-full p-5 flex flex-col gap-3">
+
+                            {/* Keyword Tags */}
+                            {mobileKeywords.length > 0 && (
+                                <p className="text-white/80 text-xs text-center tracking-wide">
+                                    {mobileKeywords.map((kw, i) => (
+                                        <span key={i}>
+                                            {i > 0 && <span className="mx-1.5 text-white/40">&bull;</span>}
+                                            <span className="capitalize">{kw}</span>
+                                        </span>
+                                    ))}
+                                </p>
+                            )}
 
                             {/* Buttons */}
                             <div className="flex items-center gap-3">
                                 {/* Play Button */}
                                 <button
-                                    onClick={() => navigateDelay(mobileHref)}
-                                    className="flex items-center justify-center gap-2 bg-white text-black px-4 py-3 rounded-lg flex-1 font-bold text-base hover:bg-gray-200 transition active:scale-95"
+                                    onClick={(e) => { e.stopPropagation(); navigateDelay(mobileHref); }}
+                                    className="flex items-center justify-center gap-2 bg-white text-black px-4 py-2 rounded-lg flex-1 font-bold text-sm hover:bg-gray-200 transition active:scale-95"
                                 >
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
                                         <path fillRule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clipRule="evenodd" />
                                     </svg>
                                     Play
@@ -210,10 +246,10 @@ export default function HeroBanner({ item, type, mobileItem }) {
 
                                 {/* My List Button */}
                                 <button
-                                    onClick={() => { }}
-                                    className="flex items-center justify-center gap-2 bg-[#262626]/90 text-white px-4 py-3 rounded-lg flex-1 font-bold text-base backdrop-blur-md border border-white/10 hover:bg-[#333] transition active:scale-95"
+                                    onClick={(e) => { e.stopPropagation(); }}
+                                    className="flex items-center justify-center gap-2 bg-[#262626]/90 text-white px-4 py-2 rounded-lg flex-1 font-bold text-sm backdrop-blur-md border border-white/10 hover:bg-[#333] transition active:scale-95"
                                 >
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                                     </svg>
                                     My List

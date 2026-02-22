@@ -1,5 +1,5 @@
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Player from "../../components/Player";
 
 const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
@@ -14,11 +14,66 @@ export default function TVDetailPage() {
   const [seasons, setSeasons] = useState([]);
   const [episodes, setEpisodes] = useState([]);
 
-  // Sync with URL params
+  // Track whether episode change came from VidFast (internal) vs user (dropdown)
+  const episodeChangeSourceRef = useRef('init'); // 'init' | 'vidfast' | 'user'
+
+  // On first load: if no season/episode in URL, try to resume from continue watching
+  useEffect(() => {
+    if (!id || !router.isReady) return;
+
+    // If URL already has season & episode params, use them
+    if (qSeason && qEpisode) {
+      setSeason(Number(qSeason));
+      setEpisode(Number(qEpisode));
+      return;
+    }
+
+    // Otherwise, check continue watching for resume position
+    try {
+      const isImdb = id.startsWith("tt");
+      const history = JSON.parse(localStorage.getItem('continueWatching') || '[]');
+      let savedItem = null;
+      if (isImdb) {
+        savedItem = history.find(i => String(i.imdb_id) === String(id));
+      }
+      if (!savedItem) {
+        savedItem = history.find(i => String(i.id) === String(id) || String(i.tmdb_id) === String(id));
+      }
+
+      if (savedItem && savedItem.season && savedItem.episode) {
+        const s = Number(savedItem.season);
+        const ep = Number(savedItem.episode);
+        setSeason(s);
+        setEpisode(ep);
+        router.replace(`/tv/${id}?season=${s}&episode=${ep}`, undefined, { shallow: true });
+      } else {
+        router.replace(`/tv/${id}?season=1&episode=1`, undefined, { shallow: true });
+      }
+    } catch (e) {
+      console.error("Failed to load resume position", e);
+      router.replace(`/tv/${id}?season=1&episode=1`, undefined, { shallow: true });
+    }
+  }, [id, router.isReady]);
+
+  // Sync with URL params when they change (e.g. from shallow updates)
   useEffect(() => {
     if (qSeason) setSeason(Number(qSeason));
     if (qEpisode) setEpisode(Number(qEpisode));
   }, [qSeason, qEpisode]);
+
+  // Handle episode change FROM VidFast player (next/prev episode button in player)
+  // This only updates URL + state; does NOT cause Player iframe to reload
+  const handleEpisodeChange = useCallback((newSeason, newEpisode) => {
+    episodeChangeSourceRef.current = 'vidfast';
+    setSeason(newSeason);
+    setEpisode(newEpisode);
+    // Update the URL without full page navigation
+    router.replace(
+      `/tv/${id}?season=${newSeason}&episode=${newEpisode}`,
+      undefined,
+      { shallow: true }
+    );
+  }, [id, router]);
 
   // Fetch TV show details
   useEffect(() => {
@@ -30,7 +85,9 @@ export default function TVDetailPage() {
         setItem(data);
         if (data.seasons && Array.isArray(data.seasons)) {
           setSeasons(data.seasons);
-          setSeason(data.seasons[0]?.season_number || 1);
+          if (!qSeason) {
+            setSeason(prev => prev || data.seasons[0]?.season_number || 1);
+          }
         }
         setLoading(false);
       });
@@ -44,7 +101,6 @@ export default function TVDetailPage() {
       .then((data) => {
         if (data.episodes && Array.isArray(data.episodes)) {
           setEpisodes(data.episodes);
-          setEpisode(data.episodes[0]?.episode_number || 1);
         }
       });
   }, [id, season]);
@@ -58,11 +114,8 @@ export default function TVDetailPage() {
 
     const saveToHistory = async () => {
       try {
-        // Fetch TMDB metadata for the card
         let fetchId = tmdbId;
-        let mediaType = 'tv';
 
-        // If we have an IMDB ID, we need to find the TMDB ID first
         if (isImdb) {
           const findRes = await fetch(
             `https://api.themoviedb.org/3/find/${id}?api_key=${TMDB_API_KEY}&external_source=imdb_id`
@@ -71,7 +124,7 @@ export default function TVDetailPage() {
           if (findData.tv_results && findData.tv_results.length > 0) {
             fetchId = findData.tv_results[0].id;
           } else {
-            return; // Can't find TMDB ID
+            return;
           }
         }
 
@@ -83,13 +136,17 @@ export default function TVDetailPage() {
 
         const history = JSON.parse(localStorage.getItem('continueWatching') || '[]');
         const existingIndex = history.findIndex(i => String(i.id) === String(fetchId));
+
+        let existingProgress = 5;
         if (existingIndex > -1) {
+          existingProgress = history[existingIndex].progress || 5;
           history.splice(existingIndex, 1);
         }
 
         history.unshift({
           id: data.id,
           tmdb_id: data.id,
+          imdb_id: isImdb ? id : undefined,
           title: data.title || data.name,
           name: data.name || data.title,
           poster_path: data.poster_path,
@@ -97,7 +154,7 @@ export default function TVDetailPage() {
           media_type: 'tv',
           season: season,
           episode: episode,
-          progress: 5,
+          progress: existingProgress,
           last_watched: Date.now()
         });
 
@@ -111,7 +168,33 @@ export default function TVDetailPage() {
     saveToHistory();
   }, [id, season, episode]);
 
+  // Handle season change from dropdown — reset episode and reload player
+  const handleSeasonChange = (newSeason) => {
+    episodeChangeSourceRef.current = 'user';
+    setSeason(newSeason);
+    setEpisode(1);
+    router.replace(`/tv/${id}?season=${newSeason}&episode=1`, undefined, { shallow: true });
+  };
+
+  // Handle episode change from dropdown — reload player
+  const handleEpisodeSelect = (newEpisode) => {
+    episodeChangeSourceRef.current = 'user';
+    setEpisode(newEpisode);
+    router.replace(`/tv/${id}?season=${season}&episode=${newEpisode}`, undefined, { shallow: true });
+  };
+
   const isImdb = id && id.startsWith("tt");
+
+  // Only generate a new player key when the user manually changes episode (not VidFast auto-next)
+  // This prevents the iframe from reloading when VidFast itself navigated
+  const [playerKey, setPlayerKey] = useState('initial');
+  useEffect(() => {
+    if (episodeChangeSourceRef.current === 'user' || episodeChangeSourceRef.current === 'init') {
+      setPlayerKey(`${season}-${episode}`);
+    }
+    // Reset source after processing
+    episodeChangeSourceRef.current = 'init';
+  }, [season, episode]);
 
   return (
     <div className="fixed inset-0 bg-black text-white flex flex-col items-center justify-center z-50 p-[5px] group/player">
@@ -133,7 +216,7 @@ export default function TVDetailPage() {
             <select
               className="bg-transparent text-white border border-white/20 rounded px-2 py-1 text-sm outline-none"
               value={season}
-              onChange={e => setSeason(Number(e.target.value))}
+              onChange={e => handleSeasonChange(Number(e.target.value))}
             >
               {seasons.map(s => (
                 <option key={s.season_number} value={s.season_number} className="bg-black text-white">
@@ -145,7 +228,7 @@ export default function TVDetailPage() {
             <select
               className="bg-transparent text-white border border-white/20 rounded px-2 py-1 text-sm outline-none"
               value={episode}
-              onChange={e => setEpisode(Number(e.target.value))}
+              onChange={e => handleEpisodeSelect(Number(e.target.value))}
             >
               {episodes.map(ep => (
                 <option key={ep.episode_number} value={ep.episode_number} className="bg-black text-white">
@@ -160,11 +243,13 @@ export default function TVDetailPage() {
       {/* Full Screen Player Container */}
       <div className="w-full h-full">
         <Player
+          key={playerKey}
           imdb_id={isImdb ? id : item?.imdb_id}
           tmdb_id={!isImdb ? id : item?.id}
           type="tv"
           season={season}
           episode={episode}
+          onEpisodeChange={handleEpisodeChange}
         />
       </div>
     </div>

@@ -1,9 +1,45 @@
 
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import MediaCard from "./MediaCard";
+
+// Spring config matching Netflix's "luxury weight"
+const NETFLIX_SPRING = { type: "spring", stiffness: 260, damping: 30 };
+
+// Row entrance variants — slide + fade
+const rowVariants = {
+    hidden: { opacity: 0, x: 30 },
+    visible: {
+        opacity: 1,
+        x: 0,
+        transition: {
+            ...NETFLIX_SPRING,
+            staggerChildren: 0.04,
+        }
+    }
+};
+
+// Individual card entrance within a row
+const cardVariants = {
+    hidden: { opacity: 0, scale: 0.92, y: 8 },
+    visible: {
+        opacity: 1,
+        scale: 1,
+        y: 0,
+        transition: NETFLIX_SPRING
+    }
+};
 
 export default function MediaRow({ title, items, type, variant = "landscape" }) {
     const rowRef = useRef(null);
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     const scroll = (direction) => {
         if (rowRef.current) {
@@ -22,8 +58,15 @@ export default function MediaRow({ title, items, type, variant = "landscape" }) 
     }
 
     return (
-        <div className="space-y-1 md:space-y-2 my-2 pl-2 md:pl-12 group relative">
-            <h2 className="text-lg md:text-2xl font-semibold text-white/90 hover:text-white transition duration-200 cursor-pointer pl-2 md:pl-4">
+        <motion.div
+            key={isMobile ? "mobile-row" : "desktop-row"}
+            className="space-y-0 md:space-y-2 my-0 md:my-2 pl-2 md:pl-12 group relative"
+            variants={isMobile ? rowVariants : {}}
+            initial={isMobile ? "hidden" : "visible"}
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+        >
+            <h2 className="text-base md:text-2xl font-medium md:font-bold text-white/90 hover:text-white transition duration-200 cursor-pointer pl-2 md:pl-4 mb-[6px] md:mb-0">
                 {title}
             </h2>
 
@@ -39,16 +82,17 @@ export default function MediaRow({ title, items, type, variant = "landscape" }) 
                 {/* Scroll Container */}
                 <div
                     ref={rowRef}
-                    className={`flex items-center ${variant === 'top10' ? 'gap-2' : 'gap-2 md:gap-2'} overflow-x-scroll overflow-y-hidden no-scrollbar scroll-smooth pb-4 md:pb-8 px-2 md:px-4`}
+                    className={`flex items-center ${(variant === 'top10' || variant === 'top10mobile') ? 'gap-2' : variant === 'showcase' ? 'gap-3' : 'gap-2 md:gap-2'} overflow-x-scroll overflow-y-hidden no-scrollbar scroll-smooth pb-2 md:pb-8 px-2 md:px-4`}
                 >
                     {items.map((item, idx) => (
-                        <MediaCard
-                            key={item.id || item.imdb_id || idx}
-                            item={item}
-                            type={type}
-                            variant={variant}
-                            rank={idx + 1}
-                        />
+                        <motion.div key={item.id || item.imdb_id || idx} variants={isMobile ? cardVariants : {}}>
+                            <MediaCard
+                                item={item}
+                                type={type}
+                                variant={variant}
+                                rank={idx + 1}
+                            />
+                        </motion.div>
                     ))}
                 </div>
 
@@ -60,6 +104,6 @@ export default function MediaRow({ title, items, type, variant = "landscape" }) 
                     <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                 </div>
             </div>
-        </div>
+        </motion.div>
     );
 }

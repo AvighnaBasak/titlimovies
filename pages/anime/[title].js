@@ -53,7 +53,7 @@ export default function AnimeDetailPage() {
       <SearchBar />
       <div className="max-w-5xl mx-auto px-4 py-8">
         {loading || !item ? (
-          <div className="text-center py-10">Loading...</div>
+          <div className="text-center py-10"></div>
         ) : (
           <>
             <MediaDetail item={item} type="anime" />

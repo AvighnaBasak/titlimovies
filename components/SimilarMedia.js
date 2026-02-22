@@ -28,7 +28,7 @@ export default function SimilarMedia({ imdb_id, type, title }) {
     <div className="mt-8">
       <h2 className="text-lg font-semibold mb-4">Similar Media</h2>
       {loading ? (
-        <div className="text-center py-6">Loading...</div>
+        <div className="text-center py-6"></div>
       ) : (
         <MediaGrid items={items} type={type} />
       )}

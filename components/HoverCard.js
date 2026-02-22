@@ -22,10 +22,21 @@ export default function HoverCard({ item, type, imageSrc }) {
     const year = (item.release_date || item.first_air_date || "2024").split("-")[0];
     const match = Math.floor(Math.random() * 30 + 70) + "% Match";
 
-    // Construct Watch URL
+    // Construct Watch URL — TV shows always include season & episode params
     let watchUrl = "/";
+    let resumeSeason = 1;
+    let resumeEpisode = 1;
+
+    // Check continue watching for resume position
+    try {
+        const cwList = JSON.parse(localStorage.getItem('continueWatching') || '[]');
+        const saved = cwList.find(i => String(i.id) === String(item.id) || String(i.tmdb_id) === String(item.id));
+        if (saved && saved.season) resumeSeason = saved.season;
+        if (saved && saved.episode) resumeEpisode = saved.episode;
+    } catch (e) { }
+
     if (type === "movie") watchUrl = `/movie/${item.imdb_id || item.id}`;
-    else if (type === "tv") watchUrl = `/tv/${item.imdb_id || item.id}`;
+    else if (type === "tv") watchUrl = `/tv/${item.imdb_id || item.id}?season=${item.season || resumeSeason}&episode=${item.episode || resumeEpisode}`;
     else if (type === "anime") watchUrl = `/anime/${encodeURIComponent(title)}`;
 
     // Save to Continue Watching in localStorage
@@ -35,14 +46,15 @@ export default function HoverCard({ item, type, imageSrc }) {
             const filtered = list.filter(i => String(i.id) !== String(item.id));
             filtered.unshift({
                 id: item.id,
+                tmdb_id: item.tmdb_id || item.id,
                 title: item.title || item.name,
                 name: item.name || item.title,
                 poster_path: item.poster_path,
                 backdrop_path: item.backdrop_path,
                 media_type: type || item.media_type || 'movie',
-                season: 1,
-                episode: 1,
-                progress: 5,
+                season: item.season || resumeSeason,
+                episode: item.episode || resumeEpisode,
+                progress: item.progress || 5,
                 last_watched: Date.now()
             });
             localStorage.setItem('continueWatching', JSON.stringify(filtered));

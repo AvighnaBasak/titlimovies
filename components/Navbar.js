@@ -2,39 +2,79 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
+import { motion, useScroll, useTransform, useMotionValueEvent } from "framer-motion";
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [query, setQuery] = useState("");
+  const [isMobile, setIsMobile] = useState(false);
   const router = useRouter();
 
-  // Handle scroll effect
+  const { scrollY } = useScroll();
+
+  // Mobile-only interpolated values
+  const bgOpacity = useTransform(scrollY, [0, 80], [0, 0.92]);
+  const blurAmount = useTransform(scrollY, [0, 80], [0, 20]);
+  const shadowOpacity = useTransform(scrollY, [0, 80], [0, 0.5]);
+  const gradientOpacity = useTransform(scrollY, [0, 80], [1, 0]);
+
   useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 0) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
+    const handleCheck = () => {
+      setIsMobile(window.innerWidth < 768);
+      setIsScrolled(window.scrollY > 0);
     };
+    const handleScroll = () => setIsScrolled(window.scrollY > 0);
+
+    handleCheck();
     window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    window.addEventListener("resize", handleCheck);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleCheck);
+    };
   }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
     if (query.trim()) {
-      // Default to movie type search or universal if supported
       router.push(`/?q=${encodeURIComponent(query)}&type=movie`);
     }
   };
 
   return (
     <nav
-      className={`fixed top-0 w-full z-50 transition-all duration-500 ease-in-out ${isScrolled ? "bg-[#141414]/80 md:bg-[#141414] backdrop-blur-md md:backdrop-blur-none shadow-lg" : "bg-gradient-to-b from-black/80 to-transparent"
+      className={`fixed top-0 w-full z-50 transition-all duration-500 ease-in-out ${!isMobile ? (isScrolled ? "bg-[#141414] shadow-lg" : "bg-gradient-to-b from-black/80 to-transparent") : ""
         }`}
     >
+      {/* MOBILE ONLY: Framer Motion Glass Layers */}
+      {isMobile && (
+        <>
+          <motion.div
+            className="absolute inset-0 -z-10"
+            style={{
+              opacity: bgOpacity,
+              backgroundColor: "#141414",
+              backdropFilter: "blur(20px)",
+              WebkitBackdropFilter: "blur(20px)",
+            }}
+          />
+          <motion.div
+            className="absolute inset-0 -z-10 bg-gradient-to-b from-black/80 to-transparent"
+            style={{
+              opacity: gradientOpacity,
+            }}
+          />
+          <motion.div
+            className="absolute inset-0 -z-10"
+            style={{
+              opacity: shadowOpacity,
+              boxShadow: "0 4px 30px rgba(0, 0, 0, 0.5)",
+            }}
+          />
+        </>
+      )}
+
       <div className="flex items-center justify-between px-4 md:px-12 py-3 md:py-4">
         {/* Left: Logo & Links */}
         <div className="flex items-center gap-4 md:gap-8">

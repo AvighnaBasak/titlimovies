@@ -88,3 +88,10 @@ body {
 html {
   scroll-behavior: smooth;
 }
+
+/* Mobile-only: Force Netflix Sans on all elements consistently */
+@media (max-width: 767px) {
+  * {
+    font-family: 'Netflix Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+  }
+}
