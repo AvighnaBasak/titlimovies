@@ -2,7 +2,7 @@ import { useRouter } from "next/router";
 import { useEffect, useState, useCallback, useRef } from "react";
 import Player from "../../components/Player";
 
-const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
+
 
 export default function TVDetailPage() {
   const router = useRouter();
@@ -118,7 +118,7 @@ export default function TVDetailPage() {
 
         if (isImdb) {
           const findRes = await fetch(
-            `https://api.themoviedb.org/3/find/${id}?api_key=${TMDB_API_KEY}&external_source=imdb_id`
+            `/api/tmdb?path=/find/${id}&external_source=imdb_id`
           );
           const findData = await findRes.json();
           if (findData.tv_results && findData.tv_results.length > 0) {
@@ -129,7 +129,7 @@ export default function TVDetailPage() {
         }
 
         const res = await fetch(
-          `https://api.themoviedb.org/3/tv/${fetchId}?api_key=${TMDB_API_KEY}`
+          `/api/tmdb?path=/tv/${fetchId}`
         );
         const data = await res.json();
         if (!data || data.success === false) return;

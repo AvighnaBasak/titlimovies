@@ -10,7 +10,7 @@ import { useTransition } from "../context/TransitionContext";
 // Spring config for luxury Netflix feel
 const NETFLIX_SPRING = { type: "spring", stiffness: 300, damping: 35 };
 
-const API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
+
 
 export default function InfoModal() {
     const { isModalOpen, modalContent, closeModal } = useModal();
@@ -60,7 +60,7 @@ export default function InfoModal() {
             try {
                 // Fetch Main Details with Append To Response
                 const append = "credits,release_dates,content_ratings,recommendations,keywords,similar,videos,images";
-                const url = `https://api.themoviedb.org/3/${mediaType}/${id}?api_key=${API_KEY}&append_to_response=${append}`;
+                const url = `/api/tmdb?path=/${mediaType}/${id}&append_to_response=${append}`;
                 const res = await fetch(url);
                 const data = await res.json();
 
@@ -237,7 +237,7 @@ export default function InfoModal() {
             // Find the season object to get accurate season number or just use selectedSeason
             // Some shows have season 0 (Specials).
             try {
-                const res = await fetch(`https://api.themoviedb.org/3/tv/${details.id}/season/${selectedSeason}?api_key=${API_KEY}`);
+                const res = await fetch(`/api/tmdb?path=/tv/${details.id}/season/${selectedSeason}`);
                 const data = await res.json();
                 setSeasonEpisodes(data.episodes || []);
             } catch (e) {

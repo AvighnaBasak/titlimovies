@@ -79,12 +79,12 @@ export default function Home() {
   useEffect(() => {
     const fetchRegionData = async () => {
       try {
-        const api_key = process.env.NEXT_PUBLIC_TMDB_API_KEY;
+
         const [regionRes, dramasRes, sciFiRes, crimeRes] = await Promise.all([
-          fetch(`/api/proxy?url=${encodeURIComponent(`https://api.themoviedb.org/3/movie/popular?region=${userRegion.code}&api_key=${api_key}&page=1`)}`),
-          fetch(`/api/proxy?url=${encodeURIComponent(`https://api.themoviedb.org/3/discover/tv?with_genres=18&sort_by=vote_average.desc&vote_count.gte=500&api_key=${api_key}&page=1`)}`),
-          fetch(`/api/proxy?url=${encodeURIComponent(`https://api.themoviedb.org/3/discover/tv?with_genres=10765&sort_by=popularity.desc&vote_count.gte=200&api_key=${api_key}&page=1`)}`),
-          fetch(`/api/proxy?url=${encodeURIComponent(`https://api.themoviedb.org/3/discover/tv?with_genres=80&with_origin_country=US&sort_by=popularity.desc&vote_count.gte=100&api_key=${api_key}&page=1`)}`)
+          fetch(`/api/tmdb?path=/movie/popular&region=${userRegion.code}&page=1`),
+          fetch(`/api/tmdb?path=/discover/tv&with_genres=18&sort_by=vote_average.desc&vote_count.gte=500&page=1`),
+          fetch(`/api/tmdb?path=/discover/tv&with_genres=10765&sort_by=popularity.desc&vote_count.gte=200&page=1`),
+          fetch(`/api/tmdb?path=/discover/tv&with_genres=80&with_origin_country=US&sort_by=popularity.desc&vote_count.gte=100&page=1`)
         ]);
         const regionData = await regionRes.json();
         const dramasData = await dramasRes.json();
@@ -116,8 +116,8 @@ export default function Home() {
           fetch(`/api/proxy?url=${encodeURIComponent("https://api.2embed.cc/trendingtv?time_window=week&page=1")}`),
           fetch(`/api/proxy?url=${encodeURIComponent("https://api.2embed.cc/trendingtv?time_window=day&page=1")}`),
           // Peak Anime: Acclaimed + Famous using TMDB discover with strict quality filters (2 pages)
-          fetch(`/api/proxy?url=${encodeURIComponent(`https://api.themoviedb.org/3/discover/tv?with_genres=16&with_original_language=ja&sort_by=vote_average.desc&vote_count.gte=1000&vote_average.gte=8&page=1&api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}`)}`),
-          fetch(`/api/proxy?url=${encodeURIComponent(`https://api.themoviedb.org/3/discover/tv?with_genres=16&with_original_language=ja&sort_by=vote_average.desc&vote_count.gte=1000&vote_average.gte=8&page=2&api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}`)}`),
+          fetch(`/api/tmdb?path=/discover/tv&with_genres=16&with_original_language=ja&sort_by=vote_average.desc&vote_count.gte=1000&vote_average.gte=8&page=1`),
+          fetch(`/api/tmdb?path=/discover/tv&with_genres=16&with_original_language=ja&sort_by=vote_average.desc&vote_count.gte=1000&vote_average.gte=8&page=2`),
           fetch(`/api/proxy?url=${encodeURIComponent("https://api.2embed.cc/trending?time_window=week&page=2")}`), // Gems (Movies Page 2)
           fetch(`/api/proxy?url=${encodeURIComponent("https://api.2embed.cc/trendingtv?time_window=week&page=2")}`) // Awards separate from main
         ]);
@@ -202,6 +202,66 @@ export default function Home() {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
 
+  // Fuzzy search helpers
+  // Generate alternative queries by inserting spaces at various positions
+  const generateAlternatives = (query) => {
+    const q = query.trim().toLowerCase();
+    const alternatives = new Set([q]);
+
+    // 1. Add spaces between concatenated words: "demonslayer" → "demon slayer"
+    //    Try inserting a space at every position and check if BOTH parts are >= 2 chars
+    for (let i = 2; i < q.length - 1; i++) {
+      const left = q.slice(0, i);
+      const right = q.slice(i);
+      if (left.length >= 2 && right.length >= 2) {
+        alternatives.add(`${left} ${right}`);
+      }
+    }
+
+    // 2. Remove existing spaces: "demon slayer" → "demonslayer" (to match things like "DemonSlayer")
+    if (q.includes(' ')) {
+      alternatives.add(q.replace(/\s+/g, ''));
+    }
+
+    // 3. Common character substitutions
+    const substitutions = [
+      [/ph/g, 'f'], [/f/g, 'ph'],
+      [/k/g, 'c'], [/c/g, 'k'],
+      [/z/g, 's'], [/s/g, 'z'],
+      [/y$/g, 'ie'], [/ie$/g, 'y'],
+    ];
+    for (const [pattern, replacement] of substitutions) {
+      const alt = q.replace(pattern, replacement);
+      if (alt !== q) alternatives.add(alt);
+    }
+
+    return [...alternatives].slice(0, 5); // Limit to 5 variations
+  };
+
+  // Levenshtein distance for ranking closeness
+  const levenshtein = (a, b) => {
+    const an = a.length, bn = b.length;
+    if (an === 0) return bn;
+    if (bn === 0) return an;
+    const matrix = Array.from({ length: an + 1 }, (_, i) => {
+      const row = new Array(bn + 1);
+      row[0] = i;
+      return row;
+    });
+    for (let j = 0; j <= bn; j++) matrix[0][j] = j;
+    for (let i = 1; i <= an; i++) {
+      for (let j = 1; j <= bn; j++) {
+        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j - 1] + cost
+        );
+      }
+    }
+    return matrix[an][bn];
+  };
+
   // Search Logic
   useEffect(() => {
     if (q) {
@@ -210,26 +270,44 @@ export default function Home() {
 
       const fetchGlobalSearch = async () => {
         try {
-          // Fetch from both 2embed and TMDB multi-search for better popularity data
-          const [movieRes, tvRes, tmdbRes] = await Promise.all([
+          const queryAlternatives = generateAlternatives(q);
+
+          // Fetch from 2embed with original query + TMDB with all alternatives
+          const embedPromises = [
             fetch(`/api/proxy?url=${encodeURIComponent(`https://api.2embed.cc/search?q=${encodeURIComponent(q)}&page=1`)}`),
-            fetch(`/api/proxy?url=${encodeURIComponent(`https://api.2embed.cc/searchtv?q=${encodeURIComponent(q)}&page=1`)}`),
-            fetch(`/api/proxy?url=${encodeURIComponent(`https://api.themoviedb.org/3/search/multi?query=${encodeURIComponent(q)}&page=1&api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}`)}`)
-          ]);
+            fetch(`/api/proxy?url=${encodeURIComponent(`https://api.2embed.cc/searchtv?q=${encodeURIComponent(q)}&page=1`)}`)
+          ];
+
+          // Search TMDB with each alternative query
+          const tmdbPromises = queryAlternatives.map(alt =>
+            fetch(`/api/tmdb?path=/search/multi&query=${encodeURIComponent(alt)}&page=1`)
+          );
+
+          const [movieRes, tvRes, ...tmdbResponses] = await Promise.all([...embedPromises, ...tmdbPromises]);
 
           const movieData = await movieRes.json();
           const tvData = await tvRes.json();
-          const tmdbData = await tmdbRes.json();
+
+          // Merge all TMDB results from alternative queries
+          const allTmdbResults = [];
+          const seenTmdbIds = new Set();
+          for (const res of tmdbResponses) {
+            const data = await res.json();
+            for (const item of (data.results || [])) {
+              if ((item.media_type === 'movie' || item.media_type === 'tv') && !seenTmdbIds.has(item.id)) {
+                seenTmdbIds.add(item.id);
+                allTmdbResults.push(item);
+              }
+            }
+          }
 
           const movies = (movieData.results || []).map(item => ({ ...item, media_type: 'movie' }));
           const shows = (tvData.results || []).map(item => ({ ...item, media_type: 'tv' }));
 
           // Build a popularity lookup from TMDB multi-search (most reliable popularity scores)
           const tmdbPopularity = new Map();
-          for (const item of (tmdbData.results || [])) {
-            if (item.media_type === 'movie' || item.media_type === 'tv') {
-              tmdbPopularity.set(item.id, item.popularity || 0);
-            }
+          for (const item of allTmdbResults) {
+            tmdbPopularity.set(item.id, item.popularity || 0);
           }
 
           // Combine 2embed results and enrich with TMDB popularity
@@ -244,15 +322,25 @@ export default function Home() {
 
           // Also add any TMDB-only results not already in 2embed results
           const existingIds = new Set(combined.map(item => item.tmdb_id || item.id));
-          for (const item of (tmdbData.results || [])) {
-            if ((item.media_type === 'movie' || item.media_type === 'tv') && !existingIds.has(item.id)) {
+          for (const item of allTmdbResults) {
+            if (!existingIds.has(item.id)) {
               combined.push({ ...item, tmdb_id: item.id });
               existingIds.add(item.id);
             }
           }
 
-          // Sort by popularity descending
-          combined.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+          // Sort primarily by popularity, with a small boost for exact/close title matches
+          const normalizedQuery = q.toLowerCase().replace(/\s+/g, '');
+          combined.forEach(item => {
+            const title = (item.title || item.name || '').toLowerCase().replace(/\s+/g, '');
+            // Exact substring match gets a small boost to bubble up the right result
+            const exactBoost = title.includes(normalizedQuery) || normalizedQuery.includes(title) ? 50 : 0;
+            // Primary sort is popularity, fuzzy match is just a tiebreaker
+            item._searchScore = (item.popularity || 0) + exactBoost;
+          });
+
+          // Sort by popularity (with small exact-match boost)
+          combined.sort((a, b) => (b._searchScore || 0) - (a._searchScore || 0));
 
           setSearchResults(combined);
           setLoading(false);

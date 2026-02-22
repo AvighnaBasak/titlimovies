@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 
 const TABS = ["movie", "tv", "anime"];
@@ -10,20 +10,61 @@ export default function SearchBar({ hideTypeSelector = false }) {
   const [type, setType] = useState(initialType);
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
+  const debounceRef = useRef(null);
 
   useEffect(() => {
     if (!query) return setSuggestions([]);
-    let url = "";
-    if (type === "movie") {
-      url = `/api/proxy?url=${encodeURIComponent(`https://api.2embed.cc/search?q=${encodeURIComponent(query)}&page=1`)}`;
-    } else if (type === "tv") {
-      url = `/api/proxy?url=${encodeURIComponent(`https://api.2embed.cc/searchtv?q=${encodeURIComponent(query)}&page=1`)}`;
-    } else if (type === "anime") {
-      url = `/api/proxy?url=${encodeURIComponent(`https://animeapi.skin/search?q=${encodeURIComponent(query)}&page=1`)}`;
-    }
-    fetch(url)
-      .then((res) => res.json())
-      .then((data) => setSuggestions(data.results || data || []));
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+
+      // Generate alternatives for fuzzy matching (insert spaces, etc.)
+      const alts = new Set([query.trim().toLowerCase()]);
+      const q = query.trim().toLowerCase();
+      for (let i = 2; i < q.length - 1; i++) {
+        if (q.slice(0, i).length >= 2 && q.slice(i).length >= 2) {
+          alts.add(`${q.slice(0, i)} ${q.slice(i)}`);
+        }
+      }
+      if (q.includes(' ')) alts.add(q.replace(/\s+/g, ''));
+      const alternatives = [...alts].slice(0, 3); // Limit for speed
+
+      let url = "";
+      if (type === "movie") {
+        url = `/api/proxy?url=${encodeURIComponent(`https://api.2embed.cc/search?q=${encodeURIComponent(query)}&page=1`)}`;
+      } else if (type === "tv") {
+        url = `/api/proxy?url=${encodeURIComponent(`https://api.2embed.cc/searchtv?q=${encodeURIComponent(query)}&page=1`)}`;
+      } else if (type === "anime") {
+        url = `/api/proxy?url=${encodeURIComponent(`https://animeapi.skin/search?q=${encodeURIComponent(query)}&page=1`)}`;
+      }
+
+      // Fetch original + TMDB alternatives in parallel
+      const tmdbFetches = alternatives.map(alt =>
+        fetch(`/api/tmdb?path=/search/multi&query=${encodeURIComponent(alt)}&page=1`)
+          .then(r => r.json())
+          .then(d => (d.results || []).filter(i => i.media_type === 'movie' || i.media_type === 'tv'))
+          .catch(() => [])
+      );
+
+      Promise.all([
+        fetch(url).then(r => r.json()).then(d => d.results || d || []).catch(() => []),
+        ...tmdbFetches
+      ]).then(([embedResults, ...tmdbResults]) => {
+        // Merge, deduplicate by id
+        const seen = new Set();
+        const merged = [];
+        for (const item of embedResults) {
+          const id = item.tmdb_id || item.id;
+          if (!seen.has(id)) { seen.add(id); merged.push(item); }
+        }
+        for (const results of tmdbResults) {
+          for (const item of results) {
+            if (!seen.has(item.id)) { seen.add(item.id); merged.push(item); }
+          }
+        }
+        setSuggestions(merged);
+      });
+    }, 300); // 300ms debounce
+    return () => clearTimeout(debounceRef.current);
   }, [query, type]);
 
   const handleSubmit = (e) => {

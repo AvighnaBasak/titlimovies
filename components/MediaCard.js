@@ -7,7 +7,7 @@ import { useModal } from "../context/ModalContext";
 import { useTransition } from "../context/TransitionContext";
 import HoverCard from "./HoverCard";
 
-const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
+
 
 // Module-level tracker: counts how many times each URL has failed to load.
 // After 5 failures for a given URL, we stop attempting to load it.
@@ -46,7 +46,7 @@ export default function MediaCard({ item, type, variant = "landscape", rank }) {
 
   // Initial Logic: use props if available
   useEffect(() => {
-    const useBackdrop = variant === "landscape";
+    const useBackdrop = variant === "landscape" || variant === "grid";
     errorCountRef.current = 0; // Reset error count on new item/variant
     setIsInitializing(true); // Reset initializing state on item change
 
@@ -74,7 +74,7 @@ export default function MediaCard({ item, type, variant = "landscape", rank }) {
             const id = item.tmdb_id || item.id;
             const effectiveType = item.media_type || type || 'movie';
             const endpointType = effectiveType === 'movie' ? 'movie' : 'tv';
-            const res = await fetch(`https://api.themoviedb.org/3/${endpointType}/${id}/images?api_key=${TMDB_API_KEY}`);
+            const res = await fetch(`/api/tmdb?path=/${endpointType}/${id}/images`);
             const data = await res.json();
 
             let newSrc = "/placeholder.png";
@@ -118,7 +118,7 @@ export default function MediaCard({ item, type, variant = "landscape", rank }) {
         const endpointType = effectiveType === 'movie' ? 'movie' : 'tv';
         // Request en, fr, and null (no language) backdrops in one call
         const res = await fetch(
-          `https://api.themoviedb.org/3/${endpointType}/${id}/images?api_key=${TMDB_API_KEY}&include_image_language=en,fr,null`
+          `/api/tmdb?path=/${endpointType}/${id}/images&include_image_language=en,fr,null`
         );
         if (!res.ok) {
           setFallbackLandscape();

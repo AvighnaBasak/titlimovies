@@ -17,12 +17,11 @@ export default function HeroBanner({ item, type, mobileItem }) {
     useEffect(() => {
         if (!mobileItem) return;
         const fetchKeywords = async () => {
-            const api_key = process.env.NEXT_PUBLIC_TMDB_API_KEY;
             const id = mobileItem.tmdb_id || mobileItem.id;
             if (!id) return;
             const mediaType = mobileItem.media_type === 'tv' || mobileItem.first_air_date ? 'tv' : 'movie';
             try {
-                const res = await fetch(`https://api.themoviedb.org/3/${mediaType}/${id}/keywords?api_key=${api_key}`);
+                const res = await fetch(`/api/tmdb?path=/${mediaType}/${id}/keywords`);
                 const data = await res.json();
                 const keywords = data.keywords || data.results || [];
                 setMobileKeywords(keywords.slice(0, 3).map(k => k.name));
@@ -38,14 +37,13 @@ export default function HeroBanner({ item, type, mobileItem }) {
         if (!item) return;
 
         const fetchWithRetry = async () => {
-            const api_key = process.env.NEXT_PUBLIC_TMDB_API_KEY;
             const id = item.id || item.tmdb_id;
             if (!id) return;
 
             // Helper to try fetching video
             const tryFetchVideo = async (mediaType) => {
                 try {
-                    const res = await fetch(`https://api.themoviedb.org/3/${mediaType}/${id}/videos?api_key=${api_key}&language=en-US`);
+                    const res = await fetch(`/api/tmdb?path=/${mediaType}/${id}/videos&language=en-US`);
                     if (!res.ok) return null;
                     const data = await res.json();
                     if (data.results && data.results.length > 0) {
@@ -59,7 +57,7 @@ export default function HeroBanner({ item, type, mobileItem }) {
             // Helper to try fetching images (logo)
             const tryFetchLogo = async (mediaType) => {
                 try {
-                    const res = await fetch(`https://api.themoviedb.org/3/${mediaType}/${id}/images?api_key=${api_key}&include_image_language=en,null`);
+                    const res = await fetch(`/api/tmdb?path=/${mediaType}/${id}/images&include_image_language=en,null`);
                     if (!res.ok) return null;
                     const data = await res.json();
                     // Get highest voted logo in English or neutral

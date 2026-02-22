@@ -2,7 +2,7 @@ import { useRouter } from "next/router";
 import { useEffect } from "react";
 import Player from "../../components/Player";
 
-const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
+
 
 export default function MovieDetailPage() {
   const router = useRouter();
@@ -20,7 +20,7 @@ export default function MovieDetailPage() {
     const saveToHistory = async () => {
       try {
         const res = await fetch(
-          `https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${TMDB_API_KEY}`
+          `/api/tmdb?path=/movie/${tmdbId}`
         );
         const data = await res.json();
         if (!data || data.success === false) return;
