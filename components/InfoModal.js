@@ -446,7 +446,9 @@ export default function InfoModal() {
                                         src={`https://image.tmdb.org/t/p/original${details.backdrop_path || details.poster_path}`}
                                         alt={details.title || details.name}
                                         fill
-                                        className="object-cover"
+                                        sizes="(max-width: 768px) 100vw, 850px"
+                                        className="object-cover img-fade"
+                                        onLoad={(e) => e.target.classList.add('img-fade-loaded')}
                                         priority
                                     />
                                 </div>
@@ -658,14 +660,16 @@ export default function InfoModal() {
                                                     {/* Top row: Thumbnail + Title */}
                                                     <div className="flex items-center gap-3">
                                                         {/* Thumbnail */}
-                                                        <div className="relative w-[120px] h-[68px] bg-[#1a1a1a] rounded overflow-hidden flex-shrink-0">
+                                                        <div className="relative w-[120px] h-[68px] bg-[#1a1a1a] rounded overflow-hidden flex-shrink-0 img-shimmer">
                                                             {ep.still_path ? (
                                                                 <Image
                                                                     loader={tmdbLoader}
                                                                     src={`https://image.tmdb.org/t/p/w300${ep.still_path}`}
                                                                     alt={ep.name}
                                                                     fill
-                                                                    className="object-cover"
+                                                                    sizes="120px"
+                                                                    className="object-cover img-fade"
+                                                                    onLoad={(e) => e.target.classList.add('img-fade-loaded')}
                                                                 />
                                                             ) : (
                                                                 <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-600">No Image</div>
@@ -743,9 +747,9 @@ export default function InfoModal() {
                                             >
                                                 <div className="flex items-center gap-4">
                                                     <div className="text-2xl text-gray-400 font-bold w-6">{ep.episode_number}</div>
-                                                    <div className="relative w-[140px] aspect-video bg-gray-800 rounded overflow-hidden flex-shrink-0">
+                                                    <div className="relative w-[140px] aspect-video bg-gray-800 rounded overflow-hidden flex-shrink-0 img-shimmer">
                                                         {ep.still_path ? (
-                                                            <Image loader={tmdbLoader} src={`https://image.tmdb.org/t/p/w300${ep.still_path}`} alt={ep.name} fill className="object-cover" />
+                                                            <Image loader={tmdbLoader} src={`https://image.tmdb.org/t/p/w300${ep.still_path}`} alt={ep.name} fill sizes="140px" className="object-cover img-fade" onLoad={(e) => e.target.classList.add('img-fade-loaded')} />
                                                         ) : (
                                                             <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">No Image</div>
                                                         )}
@@ -787,9 +791,9 @@ export default function InfoModal() {
                                     <div key={item.id} className="bg-[#2f2f2f] rounded-md overflow-hidden cursor-pointer hover:bg-[#404040] transition" onClick={() => {
                                         // TODO: handle switching modal content
                                     }}>
-                                        <div className="relative aspect-video w-full bg-gray-800">
+                                        <div className="relative aspect-video w-full bg-gray-800 img-shimmer">
                                             {item.backdrop_path || item.poster_path ? (
-                                                <Image loader={tmdbLoader} src={`https://image.tmdb.org/t/p/w500${item.backdrop_path || item.poster_path}`} alt={item.title} fill className="object-cover" />
+                                                <Image loader={tmdbLoader} src={`https://image.tmdb.org/t/p/w500${item.backdrop_path || item.poster_path}`} alt={item.title} fill sizes="(max-width: 768px) 50vw, 280px" className="object-cover img-fade" onLoad={(e) => e.target.classList.add('img-fade-loaded')} />
                                             ) : null}
                                             <div className="absolute top-2 right-2 font-bold text-white drop-shadow-md text-xs md:text-sm">
                                                 {(item.vote_average * 10).toFixed(0)}% Match

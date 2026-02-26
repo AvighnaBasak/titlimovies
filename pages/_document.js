@@ -1,9 +1,11 @@
-    import { Html, Head, Main, NextScript } from 'next/document';
+import { Html, Head, Main, NextScript } from 'next/document';
 
 export default function Document() {
     return (
         <Html lang="en">
             <Head>
+                <link rel="preconnect" href="https://image.tmdb.org" crossOrigin="anonymous" />
+                <link rel="dns-prefetch" href="https://image.tmdb.org" />
                 <link rel="icon" href="/favicon.png" type="image/png" />
                 <link rel="apple-touch-icon" href="/favicon.png" />
             </Head>

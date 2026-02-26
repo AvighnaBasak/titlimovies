@@ -145,13 +145,15 @@ export default function HoverCard({ item, type, imageSrc }) {
                 onClick={(e) => { e.stopPropagation(); saveToContinueWatching(); navigateDelay(watchUrl); }}
             >
                 {/* Media Top Half */}
-                <div className="relative w-full aspect-video bg-black">
+                <div className="relative w-full aspect-video bg-black img-shimmer">
                     <Image
                         loader={isTmdbImage(imageSrc) ? tmdbLoader : undefined}
                         src={imageSrc}
                         alt={title}
                         fill
-                        className="object-cover"
+                        sizes="340px"
+                        className="object-cover img-fade"
+                        onLoad={(e) => e.target.classList.add('img-fade-loaded')}
                     />
                     {/* Gradient Overlay */}
                     <div className="absolute inset-0 bg-gradient-to-t from-[#181818] via-transparent to-transparent opacity-90"></div>

@@ -26,7 +26,9 @@ export default function MediaDetail({ item, type }) {
         alt={title}
         width={176}
         height={256}
-        className="w-44 h-64 object-cover rounded-3xl shadow-lg mb-4 md:mb-0"
+        sizes="176px"
+        className="w-44 h-64 object-cover rounded-3xl shadow-lg mb-4 md:mb-0 img-fade"
+        onLoad={(e) => e.target.classList.add('img-fade-loaded')}
         onError={(e) => { e.target.src = '/placeholder.png'; }}
         priority
       />

@@ -229,26 +229,30 @@ export default function MediaCard({ item, type, variant = "landscape", rank }) {
         <div className="relative w-28 md:w-32 h-40 md:h-48 rounded-md shadow-lg z-10 border border-white/20 bg-gray-900 group-poster cursor-pointer">
           <Link href={href} onClick={handleCardClick} className="block w-full h-full relative overflow-hidden rounded-md">
             {/* Mobile: Use TMDB poster */}
-            <div className="block md:hidden w-full h-full relative">
+            <div className="block md:hidden w-full h-full relative img-shimmer">
               <Image
                 loader={isTmdbImage(item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : imageSrc) ? tmdbLoader : undefined}
                 src={item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : imageSrc}
                 alt={title}
                 fill
-                className={`object-cover ${imageSrc === "/placeholder.png" ? "opacity-50" : ""}`}
+                sizes="128px"
+                className={`object-cover img-fade ${imageSrc === "/placeholder.png" ? "opacity-50" : ""}`}
                 loading="lazy"
+                onLoad={(e) => e.target.classList.add('img-fade-loaded')}
                 onError={() => setHidden(true)}
               />
             </div>
             {/* Desktop: Use existing imageSrc */}
-            <div className="hidden md:block w-full h-full relative">
+            <div className="hidden md:block w-full h-full relative img-shimmer">
               <Image
                 loader={isTmdbImage(imageSrc) ? tmdbLoader : undefined}
                 src={imageSrc}
                 alt={title}
                 fill
-                className={`object-cover ${imageSrc === "/placeholder.png" ? "opacity-50" : ""}`}
+                sizes="128px"
+                className={`object-cover img-fade ${imageSrc === "/placeholder.png" ? "opacity-50" : ""}`}
                 loading="lazy"
+                onLoad={(e) => e.target.classList.add('img-fade-loaded')}
                 onError={() => setHidden(true)}
               />
             </div>
@@ -290,26 +294,30 @@ export default function MediaCard({ item, type, variant = "landscape", rank }) {
         <div className="relative w-28 md:w-32 h-40 md:h-48 rounded-md shadow-lg z-10 border border-white/20 bg-gray-900 group-poster cursor-pointer">
           <Link href={href} onClick={handleCardClick} className="block w-full h-full relative overflow-hidden rounded-md">
             {/* Mobile: Use TMDB poster */}
-            <div className="block md:hidden w-full h-full relative">
+            <div className="block md:hidden w-full h-full relative img-shimmer">
               <Image
                 loader={isTmdbImage(item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : imageSrc) ? tmdbLoader : undefined}
                 src={item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : imageSrc}
                 alt={title}
                 fill
-                className={`object-cover ${imageSrc === "/placeholder.png" ? "opacity-50" : ""}`}
+                sizes="128px"
+                className={`object-cover img-fade ${imageSrc === "/placeholder.png" ? "opacity-50" : ""}`}
                 loading="lazy"
+                onLoad={(e) => e.target.classList.add('img-fade-loaded')}
                 onError={() => setHidden(true)}
               />
             </div>
             {/* Desktop: Use existing imageSrc */}
-            <div className="hidden md:block w-full h-full relative">
+            <div className="hidden md:block w-full h-full relative img-shimmer">
               <Image
                 loader={isTmdbImage(imageSrc) ? tmdbLoader : undefined}
                 src={imageSrc}
                 alt={title}
                 fill
-                className={`object-cover ${imageSrc === "/placeholder.png" ? "opacity-50" : ""}`}
+                sizes="128px"
+                className={`object-cover img-fade ${imageSrc === "/placeholder.png" ? "opacity-50" : ""}`}
                 loading="lazy"
+                onLoad={(e) => e.target.classList.add('img-fade-loaded')}
                 onError={() => setHidden(true)}
               />
             </div>
@@ -344,26 +352,30 @@ export default function MediaCard({ item, type, variant = "landscape", rank }) {
       <div className="relative flex-shrink-0 w-[42vw] md:w-64 aspect-[2/3] group z-0 hover:z-50 transition-all duration-300">
         <Link href={href} onClick={handleCardClick} className="absolute inset-0 rounded-lg overflow-hidden bg-[#202020] shadow-md cursor-pointer block">
           {/* Mobile: Poster */}
-          <div className="block md:hidden w-full h-full relative">
+          <div className="block md:hidden w-full h-full relative img-shimmer">
             <Image
               loader={isTmdbImage(posterSrc) ? tmdbLoader : undefined}
               src={posterSrc}
               alt={title}
               fill
-              className={`object-cover ${posterSrc === "/placeholder.png" ? "opacity-50 grayscale" : ""}`}
+              sizes="42vw"
+              className={`object-cover img-fade ${posterSrc === "/placeholder.png" ? "opacity-50 grayscale" : ""}`}
               loading="lazy"
+              onLoad={(e) => e.target.classList.add('img-fade-loaded')}
               onError={() => setHidden(true)}
             />
           </div>
           {/* Desktop: Backdrop/imageSrc */}
-          <div className="hidden md:block w-full h-full relative">
+          <div className="hidden md:block w-full h-full relative img-shimmer">
             <Image
               loader={isTmdbImage(imageSrc) ? tmdbLoader : undefined}
               src={imageSrc}
               alt={title}
               fill
-              className={`object-cover ${imageSrc === "/placeholder.png" ? "opacity-50 grayscale" : ""}`}
+              sizes="256px"
+              className={`object-cover img-fade ${imageSrc === "/placeholder.png" ? "opacity-50 grayscale" : ""}`}
               loading="lazy"
+              onLoad={(e) => e.target.classList.add('img-fade-loaded')}
               onError={() => setHidden(true)}
             />
           </div>
@@ -431,7 +443,7 @@ export default function MediaCard({ item, type, variant = "landscape", rank }) {
       <div className="relative flex-shrink-0 w-[32vw] group z-0" style={{ maxWidth: '160px' }}>
         {/* Poster area with play button */}
         <div
-          className="relative w-full aspect-[2/3] rounded-md overflow-hidden bg-[#1a1a1a] cursor-pointer"
+          className="relative w-full aspect-[2/3] rounded-md overflow-hidden bg-[#1a1a1a] cursor-pointer img-shimmer"
           onClick={handleCWPlay}
         >
           <Image
@@ -439,8 +451,10 @@ export default function MediaCard({ item, type, variant = "landscape", rank }) {
             src={cwPoster}
             alt={title}
             fill
-            className="object-cover"
+            sizes="32vw"
+            className="object-cover img-fade"
             loading="lazy"
+            onLoad={(e) => e.target.classList.add('img-fade-loaded')}
             onError={() => setHidden(true)}
           />
           {/* Centered Play Button */}
@@ -505,27 +519,31 @@ export default function MediaCard({ item, type, variant = "landscape", rank }) {
       <Link href={href} onClick={handleCardClick} className="absolute inset-0 rounded-md overflow-hidden bg-[#202020] shadow-md cursor-pointer block">
 
         {/* Mobile: Vertical Poster */}
-        <div className="block md:hidden w-full h-full relative">
+        <div className="block md:hidden w-full h-full relative img-shimmer">
           <Image
             loader={isTmdbImage(posterSrc) ? tmdbLoader : undefined}
             src={posterSrc}
             alt={title}
             fill
-            className={`object-cover ${posterSrc === "/placeholder.png" ? "opacity-50 grayscale" : ""}`}
+            sizes="110px"
+            className={`object-cover img-fade ${posterSrc === "/placeholder.png" ? "opacity-50 grayscale" : ""}`}
             loading="lazy"
+            onLoad={(e) => e.target.classList.add('img-fade-loaded')}
             onError={() => setHidden(true)}
           />
         </div>
 
         {/* Desktop: Determine based on variant (Landscape uses backdrop logic) */}
-        <div className="hidden md:block w-full h-full relative">
+        <div className="hidden md:block w-full h-full relative img-shimmer">
           <Image
             loader={isTmdbImage(imageSrc) ? tmdbLoader : undefined}
             src={imageSrc}
             alt={title}
             fill
-            className={`object-cover ${imageSrc === "/placeholder.png" ? "opacity-50 grayscale" : ""}`}
+            sizes="256px"
+            className={`object-cover img-fade ${imageSrc === "/placeholder.png" ? "opacity-50 grayscale" : ""}`}
             loading="lazy"
+            onLoad={(e) => e.target.classList.add('img-fade-loaded')}
             onError={() => setHidden(true)}
           />
         </div>
