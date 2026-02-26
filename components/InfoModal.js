@@ -661,19 +661,18 @@ export default function InfoModal() {
                                                     <div className="flex items-center gap-3">
                                                         {/* Thumbnail */}
                                                         <div className="relative w-[120px] h-[68px] bg-[#1a1a1a] rounded overflow-hidden flex-shrink-0 img-shimmer">
-                                                            {ep.still_path ? (
-                                                                <Image
-                                                                    loader={tmdbLoader}
-                                                                    src={`https://image.tmdb.org/t/p/w300${ep.still_path}`}
-                                                                    alt={ep.name}
-                                                                    fill
-                                                                    sizes="120px"
-                                                                    className="object-cover img-fade"
-                                                                    onLoad={(e) => e.target.classList.add('img-fade-loaded')}
-                                                                />
-                                                            ) : (
-                                                                <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-600">No Image</div>
-                                                            )}
+                                                            <Image
+                                                                loader={tmdbLoader}
+                                                                src={ep.still_path
+                                                                    ? `https://image.tmdb.org/t/p/w300${ep.still_path}`
+                                                                    : `https://image.tmdb.org/t/p/w300${details.backdrop_path || details.poster_path}`
+                                                                }
+                                                                alt={ep.name}
+                                                                fill
+                                                                sizes="120px"
+                                                                className={`object-cover img-fade ${!ep.still_path ? 'opacity-40 grayscale' : ''}`}
+                                                                onLoad={(e) => e.target.classList.add('img-fade-loaded')}
+                                                            />
                                                             {/* Play icon overlay */}
                                                             <div className="absolute inset-0 flex items-center justify-center">
                                                                 <div className="w-8 h-8 rounded-full border-2 border-white/80 bg-black/40 flex items-center justify-center pl-0.5">
@@ -748,11 +747,18 @@ export default function InfoModal() {
                                                 <div className="flex items-center gap-4">
                                                     <div className="text-2xl text-gray-400 font-bold w-6">{ep.episode_number}</div>
                                                     <div className="relative w-[140px] aspect-video bg-gray-800 rounded overflow-hidden flex-shrink-0 img-shimmer">
-                                                        {ep.still_path ? (
-                                                            <Image loader={tmdbLoader} src={`https://image.tmdb.org/t/p/w300${ep.still_path}`} alt={ep.name} fill sizes="140px" className="object-cover img-fade" onLoad={(e) => e.target.classList.add('img-fade-loaded')} />
-                                                        ) : (
-                                                            <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">No Image</div>
-                                                        )}
+                                                        <Image
+                                                            loader={tmdbLoader}
+                                                            src={ep.still_path
+                                                                ? `https://image.tmdb.org/t/p/w300${ep.still_path}`
+                                                                : `https://image.tmdb.org/t/p/w300${details.backdrop_path || details.poster_path}`
+                                                            }
+                                                            alt={ep.name}
+                                                            fill
+                                                            sizes="140px"
+                                                            className={`object-cover img-fade ${!ep.still_path ? 'opacity-40 grayscale' : ''}`}
+                                                            onLoad={(e) => e.target.classList.add('img-fade-loaded')}
+                                                        />
                                                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
                                                             <div className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center pl-1">
                                                                 <svg className="w-5 h-5 text-black" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
@@ -774,7 +780,7 @@ export default function InfoModal() {
                                                         <span>{ep.name}</span>
                                                         <span className="text-sm font-normal text-gray-400">{ep.runtime ? `${ep.runtime}m` : ''}</span>
                                                     </div>
-                                                    <p className="text-gray-400 text-sm line-clamp-2 leading-snug">{ep.overview}</p>
+                                                    <p className="text-gray-400 text-sm line-clamp-2 leading-snug">{ep.overview || 'No description available yet.'}</p>
                                                 </div>
                                             </div>
                                         ))}
