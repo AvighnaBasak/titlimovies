@@ -1,4 +1,5 @@
 import Image from "next/image";
+import tmdbLoader, { isTmdbImage } from "../utils/tmdbLoader";
 
 export default function MediaDetail({ item, type }) {
   if (!item) return null;
@@ -20,6 +21,7 @@ export default function MediaDetail({ item, type }) {
   return (
     <div className="flex flex-col md:flex-row gap-6 items-start">
       <Image
+        loader={isTmdbImage(poster) ? tmdbLoader : undefined}
         src={poster}
         alt={title}
         width={176}

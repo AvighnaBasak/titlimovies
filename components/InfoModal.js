@@ -3,6 +3,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/router";
 import Image from "next/image";
+import tmdbLoader from "../utils/tmdbLoader";
 import { motion } from "framer-motion";
 import { useModal } from "../context/ModalContext";
 import { useTransition } from "../context/TransitionContext";
@@ -441,6 +442,7 @@ export default function InfoModal() {
                                     className={`absolute inset-0 z-[1] transition-opacity duration-1000 ${videoKey && isPlaying ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
                                 >
                                     <Image
+                                        loader={tmdbLoader}
                                         src={`https://image.tmdb.org/t/p/original${details.backdrop_path || details.poster_path}`}
                                         alt={details.title || details.name}
                                         fill
@@ -659,6 +661,7 @@ export default function InfoModal() {
                                                         <div className="relative w-[120px] h-[68px] bg-[#1a1a1a] rounded overflow-hidden flex-shrink-0">
                                                             {ep.still_path ? (
                                                                 <Image
+                                                                    loader={tmdbLoader}
                                                                     src={`https://image.tmdb.org/t/p/w300${ep.still_path}`}
                                                                     alt={ep.name}
                                                                     fill
@@ -742,7 +745,7 @@ export default function InfoModal() {
                                                     <div className="text-2xl text-gray-400 font-bold w-6">{ep.episode_number}</div>
                                                     <div className="relative w-[140px] aspect-video bg-gray-800 rounded overflow-hidden flex-shrink-0">
                                                         {ep.still_path ? (
-                                                            <Image src={`https://image.tmdb.org/t/p/w300${ep.still_path}`} alt={ep.name} fill className="object-cover" />
+                                                            <Image loader={tmdbLoader} src={`https://image.tmdb.org/t/p/w300${ep.still_path}`} alt={ep.name} fill className="object-cover" />
                                                         ) : (
                                                             <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">No Image</div>
                                                         )}
@@ -786,7 +789,7 @@ export default function InfoModal() {
                                     }}>
                                         <div className="relative aspect-video w-full bg-gray-800">
                                             {item.backdrop_path || item.poster_path ? (
-                                                <Image src={`https://image.tmdb.org/t/p/w500${item.backdrop_path || item.poster_path}`} alt={item.title} fill className="object-cover" />
+                                                <Image loader={tmdbLoader} src={`https://image.tmdb.org/t/p/w500${item.backdrop_path || item.poster_path}`} alt={item.title} fill className="object-cover" />
                                             ) : null}
                                             <div className="absolute top-2 right-2 font-bold text-white drop-shadow-md text-xs md:text-sm">
                                                 {(item.vote_average * 10).toFixed(0)}% Match

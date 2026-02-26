@@ -6,6 +6,7 @@ import { useRouter } from "next/router";
 import { useModal } from "../context/ModalContext";
 import { useTransition } from "../context/TransitionContext";
 import HoverCard from "./HoverCard";
+import tmdbLoader, { isTmdbImage } from "../utils/tmdbLoader";
 
 
 
@@ -230,6 +231,7 @@ export default function MediaCard({ item, type, variant = "landscape", rank }) {
             {/* Mobile: Use TMDB poster */}
             <div className="block md:hidden w-full h-full relative">
               <Image
+                loader={isTmdbImage(item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : imageSrc) ? tmdbLoader : undefined}
                 src={item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : imageSrc}
                 alt={title}
                 fill
@@ -241,6 +243,7 @@ export default function MediaCard({ item, type, variant = "landscape", rank }) {
             {/* Desktop: Use existing imageSrc */}
             <div className="hidden md:block w-full h-full relative">
               <Image
+                loader={isTmdbImage(imageSrc) ? tmdbLoader : undefined}
                 src={imageSrc}
                 alt={title}
                 fill
@@ -289,6 +292,7 @@ export default function MediaCard({ item, type, variant = "landscape", rank }) {
             {/* Mobile: Use TMDB poster */}
             <div className="block md:hidden w-full h-full relative">
               <Image
+                loader={isTmdbImage(item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : imageSrc) ? tmdbLoader : undefined}
                 src={item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : imageSrc}
                 alt={title}
                 fill
@@ -300,6 +304,7 @@ export default function MediaCard({ item, type, variant = "landscape", rank }) {
             {/* Desktop: Use existing imageSrc */}
             <div className="hidden md:block w-full h-full relative">
               <Image
+                loader={isTmdbImage(imageSrc) ? tmdbLoader : undefined}
                 src={imageSrc}
                 alt={title}
                 fill
@@ -341,6 +346,7 @@ export default function MediaCard({ item, type, variant = "landscape", rank }) {
           {/* Mobile: Poster */}
           <div className="block md:hidden w-full h-full relative">
             <Image
+              loader={isTmdbImage(posterSrc) ? tmdbLoader : undefined}
               src={posterSrc}
               alt={title}
               fill
@@ -352,6 +358,7 @@ export default function MediaCard({ item, type, variant = "landscape", rank }) {
           {/* Desktop: Backdrop/imageSrc */}
           <div className="hidden md:block w-full h-full relative">
             <Image
+              loader={isTmdbImage(imageSrc) ? tmdbLoader : undefined}
               src={imageSrc}
               alt={title}
               fill
@@ -428,6 +435,7 @@ export default function MediaCard({ item, type, variant = "landscape", rank }) {
           onClick={handleCWPlay}
         >
           <Image
+            loader={isTmdbImage(cwPoster) ? tmdbLoader : undefined}
             src={cwPoster}
             alt={title}
             fill
@@ -499,6 +507,7 @@ export default function MediaCard({ item, type, variant = "landscape", rank }) {
         {/* Mobile: Vertical Poster */}
         <div className="block md:hidden w-full h-full relative">
           <Image
+            loader={isTmdbImage(posterSrc) ? tmdbLoader : undefined}
             src={posterSrc}
             alt={title}
             fill
@@ -511,6 +520,7 @@ export default function MediaCard({ item, type, variant = "landscape", rank }) {
         {/* Desktop: Determine based on variant (Landscape uses backdrop logic) */}
         <div className="hidden md:block w-full h-full relative">
           <Image
+            loader={isTmdbImage(imageSrc) ? tmdbLoader : undefined}
             src={imageSrc}
             alt={title}
             fill

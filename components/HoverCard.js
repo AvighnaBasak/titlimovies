@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
+import tmdbLoader, { isTmdbImage } from "../utils/tmdbLoader";
 import Link from "next/link";
 import { useRouter } from "next/router";
 
@@ -146,6 +147,7 @@ export default function HoverCard({ item, type, imageSrc }) {
                 {/* Media Top Half */}
                 <div className="relative w-full aspect-video bg-black">
                     <Image
+                        loader={isTmdbImage(imageSrc) ? tmdbLoader : undefined}
                         src={imageSrc}
                         alt={title}
                         fill
