@@ -702,11 +702,9 @@ export default function InfoModal() {
                                                     </div>
 
                                                     {/* Description */}
-                                                    {ep.overview && (
-                                                        <p className="text-gray-500 text-xs leading-relaxed mt-2.5 line-clamp-3">
-                                                            {ep.overview}
-                                                        </p>
-                                                    )}
+                                                    <p className="text-gray-500 text-xs leading-relaxed mt-2.5 line-clamp-3">
+                                                        {ep.overview || 'Coming soon'}
+                                                    </p>
                                                 </div>
                                                 {/* Separator */}
                                                 {idx < seasonEpisodes.length - 1 && (
@@ -780,7 +778,7 @@ export default function InfoModal() {
                                                         <span>{ep.name}</span>
                                                         <span className="text-sm font-normal text-gray-400">{ep.runtime ? `${ep.runtime}m` : ''}</span>
                                                     </div>
-                                                    <p className="text-gray-400 text-sm line-clamp-2 leading-snug">{ep.overview || 'No description available yet.'}</p>
+                                                    <p className="text-gray-400 text-sm line-clamp-2 leading-snug">{ep.overview || 'Coming soon'}</p>
                                                 </div>
                                             </div>
                                         ))}
