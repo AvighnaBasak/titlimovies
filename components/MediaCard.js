@@ -1,7 +1,8 @@
 // components/MediaCard.js
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, memo, useCallback } from "react";
+
 import { useRouter } from "next/router";
 import { useModal } from "../context/ModalContext";
 import { useTransition } from "../context/TransitionContext";
@@ -25,7 +26,7 @@ function recordUrlFailure(url) {
   return count;
 }
 
-export default function MediaCard({ item, type, variant = "landscape", rank }) {
+function MediaCard({ item, type, variant = "landscape", rank }) {
   const { openModal } = useModal();
   const router = useRouter();
   const { navigateDelay } = useTransition();
@@ -576,3 +577,7 @@ export default function MediaCard({ item, type, variant = "landscape", rank }) {
     </div>
   );
 }
+
+// Memoize to prevent re-renders when parent row/page state changes
+// but this card's specific props (item, type, variant, rank) are unchanged
+export default memo(MediaCard);

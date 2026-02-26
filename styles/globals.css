@@ -96,6 +96,54 @@ html {
   }
 }
 
+/* ── Mobile Performance: GPU-accelerated scroll containers ── */
+@media (max-width: 767px) {
+
+  /* Promote scroll containers to own compositor layer */
+  .mobile-scroll-row {
+    -webkit-overflow-scrolling: touch;
+    will-change: scroll-position;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+  }
+
+  /* Each media row gets paint containment to limit reflow scope */
+  .mobile-row-contain {
+    contain: layout style paint;
+    content-visibility: auto;
+    contain-intrinsic-size: auto 200px;
+  }
+
+  /* Cards get their own layer to prevent parent repaints */
+  .mobile-card-layer {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  /* ── Modal: Hardware-accelerated transitions ── */
+  .mobile-modal-overlay {
+    /* No backdrop-filter on mobile — kills performance on Safari */
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background-color: rgba(0, 0, 0, 0.75) !important;
+  }
+
+  .mobile-modal-sheet {
+    will-change: transform, opacity;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  /* Simpler image fade on mobile to reduce compositor work */
+  .img-fade {
+    transition: opacity 0.2s linear !important;
+  }
+}
+
 /* ── Image Loading: Shimmer Skeleton ── */
 @keyframes shimmer {
   0% {
