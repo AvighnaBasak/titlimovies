@@ -38,6 +38,9 @@ const AD_PATTERNS = [
   'virus', 'malware', 'phishing', 'survey', 'prize',
   'congratulations', 'you-won', 'giftcard', 'free-iphone',
   'spin-wheel', 'lucky-visitor', 'claimreward',
+  // Known VidFast popup domains
+  'shopping-market.pro', 'rkv1.com', 'viifwjox.com',
+  'top-r3v3nue.com', 'r3v3nue',
   // Suspicious protocols
   'about:blank', 'javascript:', 'blob:', 'data:'
 ];
