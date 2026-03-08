@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 
 const VIDFAST_ORIGINS = [
   'https://vidfast.pro',
@@ -14,6 +14,8 @@ export default function Player({ imdb_id, tmdb_id, type, season, episode, onEpis
   const id = imdb_id || tmdb_id;
   const currentEpisodeRef = useRef(episode);
   const currentSeasonRef = useRef(season);
+  const iframeRef = useRef(null);
+  const [iframeKey, setIframeKey] = useState(0);
 
   // Keep refs in sync with props
   useEffect(() => {
@@ -41,6 +43,35 @@ export default function Player({ imdb_id, tmdb_id, type, season, episode, onEpis
   };
 
   const src = getVidFastUrl();
+
+  // === Page Visibility: recover from popup/tab-switch corruption ===
+  useEffect(() => {
+    if (!src) return;
+
+    let hiddenAt = null;
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        // Page became hidden (popup opened, tab switched, etc.)
+        hiddenAt = Date.now();
+      } else if (hiddenAt) {
+        // Page became visible again
+        const hiddenDuration = Date.now() - hiddenAt;
+        hiddenAt = null;
+
+        // If hidden for more than 500ms (likely a popup, not a quick alt-tab),
+        // reload the iframe to reset any corrupted playback state (2x speed, etc.)
+        if (hiddenDuration > 500) {
+          setTimeout(() => {
+            setIframeKey(prev => prev + 1);
+          }, 1000);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [src]);
 
   // === Save per-episode progress to localStorage ===
   const saveEpisodeProgress = useCallback((showId, s, ep, watched, duration) => {
@@ -101,13 +132,12 @@ export default function Player({ imdb_id, tmdb_id, type, season, episode, onEpis
       if (!VIDFAST_ORIGINS.includes(origin) || !data) return;
 
       // ─── Handle PLAYER_EVENT (primary VidFast event format) ───
-      // Structure: { type: "PLAYER_EVENT", data: { event, currentTime, duration, tmdbId, mediaType, season?, episode?, playing, muted, volume } }
       if (data.type === 'PLAYER_EVENT' && data.data) {
         const evt = data.data;
         const currentTime = evt.currentTime;
         const duration = evt.duration;
 
-        // Detect episode change: VidFast includes season/episode in PLAYER_EVENT
+        // Detect episode change
         if (type === 'tv' && evt.season !== undefined && evt.episode !== undefined) {
           const reportedSeason = Number(evt.season);
           const reportedEpisode = Number(evt.episode);
@@ -122,7 +152,7 @@ export default function Player({ imdb_id, tmdb_id, type, season, episode, onEpis
           }
         }
 
-        // Save progress on timeupdate/seeked/pause events
+        // Save progress
         if (currentTime != null && duration != null && duration > 0) {
           if (type === 'tv') {
             saveEpisodeProgress(id, currentSeasonRef.current, currentEpisodeRef.current, currentTime, duration);
@@ -132,7 +162,6 @@ export default function Player({ imdb_id, tmdb_id, type, season, episode, onEpis
       }
 
       // ─── Handle MEDIA_DATA (secondary/legacy format) ───
-      // Structure: { type: "MEDIA_DATA", data: { ...stored progress } }
       if (data.type === 'MEDIA_DATA' && data.data) {
         localStorage.setItem('vidFastProgress', JSON.stringify(data.data));
 
@@ -145,7 +174,6 @@ export default function Player({ imdb_id, tmdb_id, type, season, episode, onEpis
           updateContinueWatching(watched, duration);
         }
 
-        // Check for episode info
         if (type === 'tv') {
           const s = progressData.last_season_watched ?? progressData.season;
           const ep = progressData.last_episode_watched ?? progressData.episode;
@@ -178,11 +206,16 @@ export default function Player({ imdb_id, tmdb_id, type, season, episode, onEpis
     <div className="w-full h-full">
       <div className="relative w-full h-full rounded-xl overflow-hidden bg-black shadow-2xl">
         <iframe
+          key={iframeKey}
+          ref={iframeRef}
           src={src}
           className="w-full h-full"
+          style={{ border: 'none', minHeight: '100%', minWidth: '100%' }}
           frameBorder="0"
           allowFullScreen
-          allow="autoplay; encrypted-media; picture-in-picture"
+          allow="autoplay; fullscreen; encrypted-media; picture-in-picture; accelerometer; gyroscope"
+          referrerPolicy="origin"
+          loading="eager"
           title="VidFast Player"
         />
       </div>

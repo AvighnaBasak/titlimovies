@@ -63,7 +63,7 @@ export default function Home() {
   useEffect(() => {
     const detectRegion = async () => {
       try {
-        const res = await fetch('https://ipapi.co/json/');
+        const res = await fetch(`/api/proxy?url=${encodeURIComponent('https://ipapi.co/json/')}`);
         const data = await res.json();
         if (data.country_code && data.country_name) {
           setUserRegion({ code: data.country_code, name: data.country_name });

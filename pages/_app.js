@@ -33,7 +33,7 @@ function AppContent({ Component, pageProps }) {
     transformOrigin: "top center",
     overflow: isModalOpen ? "hidden" : "visible",
     transition: "transform 0.35s cubic-bezier(0.25, 0.1, 0.25, 1), border-radius 0.35s cubic-bezier(0.25, 0.1, 0.25, 1)",
-    transform: isModalOpen ? "scale3d(0.92, 0.92, 1) translateY(-10px)" : "scale3d(1, 1, 1) translateY(0)",
+    transform: isModalOpen ? "scale3d(0.92, 0.92, 1) translateY(-10px)" : "none",
     borderRadius: isModalOpen ? "16px" : "0px",
     willChange: isModalOpen ? "transform" : "auto",
   } : {
