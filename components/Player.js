@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useRef, useCallback } from "react";
 
 const VIDFAST_ORIGINS = [
   'https://vidfast.pro',
@@ -14,8 +14,7 @@ export default function Player({ imdb_id, tmdb_id, type, season, episode, onEpis
   const id = imdb_id || tmdb_id;
   const currentEpisodeRef = useRef(episode);
   const currentSeasonRef = useRef(season);
-  const iframeRef = useRef(null);
-  const [iframeKey, setIframeKey] = useState(0);
+
 
   // Keep refs in sync with props
   useEffect(() => {
@@ -44,34 +43,8 @@ export default function Player({ imdb_id, tmdb_id, type, season, episode, onEpis
 
   const src = getVidFastUrl();
 
-  // === Page Visibility: recover from popup/tab-switch corruption ===
-  useEffect(() => {
-    if (!src) return;
 
-    let hiddenAt = null;
 
-    const handleVisibility = () => {
-      if (document.hidden) {
-        // Page became hidden (popup opened, tab switched, etc.)
-        hiddenAt = Date.now();
-      } else if (hiddenAt) {
-        // Page became visible again
-        const hiddenDuration = Date.now() - hiddenAt;
-        hiddenAt = null;
-
-        // If hidden for more than 500ms (likely a popup, not a quick alt-tab),
-        // reload the iframe to reset any corrupted playback state (2x speed, etc.)
-        if (hiddenDuration > 500) {
-          setTimeout(() => {
-            setIframeKey(prev => prev + 1);
-          }, 1000);
-        }
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [src]);
 
   // === Save per-episode progress to localStorage ===
   const saveEpisodeProgress = useCallback((showId, s, ep, watched, duration) => {
@@ -206,8 +179,6 @@ export default function Player({ imdb_id, tmdb_id, type, season, episode, onEpis
     <div className="w-full h-full">
       <div className="relative w-full h-full rounded-xl overflow-hidden bg-black shadow-2xl">
         <iframe
-          key={iframeKey}
-          ref={iframeRef}
           src={src}
           className="w-full h-full"
           style={{ border: 'none', minHeight: '100%', minWidth: '100%' }}

@@ -1,4 +1,4 @@
-TITLIMOVIES v1.2.1
+TITLIMOVIES v1.2.2
 
 Welcome to the comprehensive documentation for TITLIMOVIES.
 
