@@ -10,17 +10,36 @@ const VIDFAST_ORIGINS = [
   'https://vidfast.xyz'
 ];
 
-// Common ad/popup URL patterns to block
+// Common ad/popup/adult URL patterns to block
 const AD_PATTERNS = [
+  // Ad networks
   'doubleclick', 'googlesyndication', 'adservice', 'adsystem',
   'popads', 'popcash', 'propellerads', 'exoclick', 'juicyads',
   'trafficjunky', 'tsyndicate', 'clickadu', 'hilltopads',
   'adsterra', 'a-ads', 'ad.plus', 'admaven', 'monetag',
   'profitablecpm', 'clickaine', 'richads', 'pushground',
   'evadav', 'galaksion', 'roller-ads', 'clickadilla',
+  'revcontent', 'mgid', 'taboola', 'outbrain', 'zergnet',
+  // Gambling / betting
   'betting', 'casino', 'poker', 'slots', '1xbet', 'stake.com',
   'melbet', 'mostbet', 'pin-up', 'linebet', 'betwinner',
-  'about:blank', 'javascript:', 'blob:'
+  'bet365', 'betway', '22bet', 'parimatch', 'megapari',
+  // Adult / dating / livestream
+  'tango', 'chaturbate', 'stripchat', 'bongacams', 'cam4',
+  'livejasmin', 'camsoda', 'myfreecams', 'flirt4free',
+  'pornhub', 'xvideos', 'xhamster', 'xnxx', 'redtube',
+  'youporn', 'tube8', 'spankbang', 'eporner', 'hentai',
+  'onlyfans', 'fansly', 'manyvids', 'clips4sale',
+  'ashleymadison', 'adultfriendfinder', 'banglocals',
+  'hookup', 'fuckbook', 'sexting', 'milf', 'meetandfuck',
+  'jerkmate', 'cams.com', 'imlive', 'streamate', 'flirt',
+  'datinggold', 'datingpartner', 'datingsphere',
+  // Scam / malware / phishing
+  'virus', 'malware', 'phishing', 'survey', 'prize',
+  'congratulations', 'you-won', 'giftcard', 'free-iphone',
+  'spin-wheel', 'lucky-visitor', 'claimreward',
+  // Suspicious protocols
+  'about:blank', 'javascript:', 'blob:', 'data:'
 ];
 
 function isAdUrl(url) {
