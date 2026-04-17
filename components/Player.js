@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useRef, useCallback } from "react";
 
 const VIDFAST_ORIGINS = [
   'https://vidfast.pro',
@@ -10,88 +10,16 @@ const VIDFAST_ORIGINS = [
   'https://vidfast.xyz'
 ];
 
-// Common ad/popup/adult URL patterns to block
-const AD_PATTERNS = [
-  // Ad networks
-  'doubleclick', 'googlesyndication', 'adservice', 'adsystem',
-  'popads', 'popcash', 'propellerads', 'exoclick', 'juicyads',
-  'trafficjunky', 'tsyndicate', 'clickadu', 'hilltopads',
-  'adsterra', 'a-ads', 'ad.plus', 'admaven', 'monetag',
-  'profitablecpm', 'clickaine', 'richads', 'pushground',
-  'evadav', 'galaksion', 'roller-ads', 'clickadilla',
-  'revcontent', 'mgid', 'taboola', 'outbrain', 'zergnet',
-  // Gambling / betting
-  'betting', 'casino', 'poker', 'slots', '1xbet', 'stake.com',
-  'melbet', 'mostbet', 'pin-up', 'linebet', 'betwinner',
-  'bet365', 'betway', '22bet', 'parimatch', 'megapari',
-  // Adult / dating / livestream
-  'tango', 'chaturbate', 'stripchat', 'bongacams', 'cam4',
-  'livejasmin', 'camsoda', 'myfreecams', 'flirt4free',
-  'pornhub', 'xvideos', 'xhamster', 'xnxx', 'redtube',
-  'youporn', 'tube8', 'spankbang', 'eporner', 'hentai',
-  'onlyfans', 'fansly', 'manyvids', 'clips4sale',
-  'ashleymadison', 'adultfriendfinder', 'banglocals',
-  'hookup', 'fuckbook', 'sexting', 'milf', 'meetandfuck',
-  'jerkmate', 'cams.com', 'imlive', 'streamate', 'flirt',
-  'datinggold', 'datingpartner', 'datingsphere',
-  // Scam / malware / phishing
-  'virus', 'malware', 'phishing', 'survey', 'prize',
-  'congratulations', 'you-won', 'giftcard', 'free-iphone',
-  'spin-wheel', 'lucky-visitor', 'claimreward',
-  // Known VidFast popup domains
-  'shopping-market.pro', 'rkv1.com', 'viifwjox.com',
-  'top-r3v3nue.com', 'r3v3nue',
-  // Suspicious protocols
-  'about:blank', 'javascript:', 'blob:', 'data:'
-];
-
-function isAdUrl(url) {
-  if (!url || typeof url !== 'string') return true; // Block empty/null popups
-  const lower = url.toLowerCase();
-  return AD_PATTERNS.some(p => lower.includes(p));
-}
-
 export default function Player({ imdb_id, tmdb_id, type, season, episode, onEpisodeChange }) {
   const id = imdb_id || tmdb_id;
   const currentEpisodeRef = useRef(episode);
   const currentSeasonRef = useRef(season);
-  const [shieldActive, setShieldActive] = useState(true);
 
   // Keep refs in sync with props
   useEffect(() => {
     currentEpisodeRef.current = episode;
     currentSeasonRef.current = season;
   }, [episode, season]);
-
-  // === POPUP BLOCKER: Override window.open while player is mounted ===
-  useEffect(() => {
-    const originalOpen = window.open;
-
-    window.open = function (url, target, features) {
-      // Block known ad URLs and suspicious popups
-      if (!url || isAdUrl(url)) {
-        console.log('[PopupBlocker] Blocked ad popup:', url?.substring(0, 80));
-        return null;
-      }
-      // Allow legitimate opens (e.g., external links user actually clicked)
-      return originalOpen.call(this, url, target, features);
-    };
-
-    // Block iframe-initiated top-level navigation (common ad trick)
-    const blockNavigation = (e) => {
-      // Only block if it's from an iframe trying to navigate the top frame
-      if (e.target !== window) {
-        e.preventDefault();
-        console.log('[PopupBlocker] Blocked top-level navigation attempt');
-      }
-    };
-    window.addEventListener('beforeunload', blockNavigation);
-
-    return () => {
-      window.open = originalOpen;
-      window.removeEventListener('beforeunload', blockNavigation);
-    };
-  }, []);
 
   const getVidFastUrl = () => {
     const baseUrl = "https://vidfast.pro";
@@ -113,20 +41,6 @@ export default function Player({ imdb_id, tmdb_id, type, season, episode, onEpis
   };
 
   const src = getVidFastUrl();
-
-  // === Click Shield: absorb the first click (usually triggers popup) ===
-  // After first click, the shield disappears and subsequent clicks go to the player
-  const handleShieldClick = () => {
-    setShieldActive(false);
-  };
-
-  // Auto-remove shield after 3 seconds if user hasn't clicked yet
-  // (video auto-plays anyway, shield is just for first-interaction protection)
-  useEffect(() => {
-    if (!shieldActive) return;
-    const timer = setTimeout(() => setShieldActive(false), 3000);
-    return () => clearTimeout(timer);
-  }, [shieldActive]);
 
   // === Save per-episode progress to localStorage ===
   const saveEpisodeProgress = useCallback((showId, s, ep, watched, duration) => {
@@ -260,27 +174,29 @@ export default function Player({ imdb_id, tmdb_id, type, season, episode, onEpis
   return (
     <div className="w-full h-full">
       <div className="relative w-full h-full rounded-xl overflow-hidden bg-black shadow-2xl">
+        {/*
+          sandbox WITHOUT allow-popups = the ONLY way to block cross-origin iframe popups.
+          Permissions granted:
+            allow-scripts        → VidFast JS can run
+            allow-same-origin    → VidFast can use cookies/storage/fetch
+            allow-forms          → form submissions if needed
+            allow-presentation   → fullscreen via Presentation API
+          Permissions BLOCKED:
+            allow-popups         → NO popup windows (ads!)
+            allow-top-navigation → can't redirect our page
+        */}
         <iframe
           src={src}
           className="w-full h-full"
           style={{ border: 'none', minHeight: '100%', minWidth: '100%' }}
           frameBorder="0"
           allowFullScreen
+          sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
           allow="autoplay; fullscreen; encrypted-media; picture-in-picture; accelerometer; gyroscope"
           referrerPolicy="origin"
           loading="eager"
           title="VidFast Player"
         />
-
-        {/* Click shield: absorbs the first click which usually triggers a popup.
-            Auto-removes after 3s or on first tap. Video auto-plays so no interaction needed. */}
-        {shieldActive && (
-          <div
-            className="absolute inset-0 z-10 cursor-pointer"
-            onClick={handleShieldClick}
-            style={{ background: 'transparent' }}
-          />
-        )}
       </div>
     </div>
   );
