@@ -26,6 +26,13 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [heroReady, setHeroReady] = useState(false);
 
+  // Hard safety net: never let the initial loader hang longer than 8s, whatever
+  // happens with the data or hero image.
+  useEffect(() => {
+    const t = setTimeout(() => setHeroReady(true), 8000);
+    return () => clearTimeout(t);
+  }, []);
+
   // New state for Continue Watching
   const [continueWatching, setContinueWatching] = useState([]);
 
@@ -90,41 +97,43 @@ export default function Home() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // All content is sourced from TMDB — same catalog the player resolves
+        // against — so every item already carries backdrop_path + poster_path
+        // + id. That means no per-card image lookups (fast) and a hero that
+        // always has a real backdrop (consistent, no placeholder collage).
         const [
           movieRes, movieLatestRes,
           tvRes, tvLatestRes,
           animeRes, animeRes2,
-          topRatedMovieRes, topRatedTVRes
+          gemsRes, moreTVRes
         ] = await Promise.all([
-          fetch(`/api/proxy?url=${encodeURIComponent("https://api.2embed.cc/trending?time_window=week&page=1")}`),
-          fetch(`/api/proxy?url=${encodeURIComponent("https://api.2embed.cc/trending?time_window=day&page=1")}`),
-          fetch(`/api/proxy?url=${encodeURIComponent("https://api.2embed.cc/trendingtv?time_window=week&page=1")}`),
-          fetch(`/api/proxy?url=${encodeURIComponent("https://api.2embed.cc/trendingtv?time_window=day&page=1")}`),
-          // Peak Anime: Acclaimed + Famous using TMDB discover with strict quality filters (2 pages)
+          fetch(`/api/tmdb?path=/trending/movie/week`),
+          fetch(`/api/tmdb?path=/movie/now_playing`),
+          fetch(`/api/tmdb?path=/trending/tv/week`),
+          fetch(`/api/tmdb?path=/tv/popular`),
+          // Peak Anime: acclaimed + famous via TMDB discover (2 pages)
           fetch(`/api/tmdb?path=/discover/tv&with_genres=16&with_original_language=ja&sort_by=vote_average.desc&vote_count.gte=1000&vote_average.gte=8&page=1`),
           fetch(`/api/tmdb?path=/discover/tv&with_genres=16&with_original_language=ja&sort_by=vote_average.desc&vote_count.gte=1000&vote_average.gte=8&page=2`),
-          fetch(`/api/proxy?url=${encodeURIComponent("https://api.2embed.cc/trending?time_window=week&page=2")}`), // Gems (Movies Page 2)
-          fetch(`/api/proxy?url=${encodeURIComponent("https://api.2embed.cc/trendingtv?time_window=week&page=2")}`) // Awards separate from main
+          fetch(`/api/tmdb?path=/movie/top_rated`),
+          fetch(`/api/tmdb?path=/discover/tv&sort_by=vote_average.desc&vote_count.gte=1500&page=1`)
         ]);
 
-        const movies = (await movieRes.json()).results || [];
-        const latestMov = (await movieLatestRes.json()).results || [];
-        const tvShows = (await tvRes.json()).results || [];
-        const latestTVShows = (await tvLatestRes.json()).results || [];
+        const withType = (arr, t) => (arr || []).map((i) => ({ ...i, media_type: i.media_type || t }));
 
-        // Process Peak Anime with Bayesian Weighted Rating
+        const movies = withType((await movieRes.json()).results, 'movie');
+        const latestMov = withType((await movieLatestRes.json()).results, 'movie');
+        const tvShows = withType((await tvRes.json()).results, 'tv');
+        const latestTVShows = withType((await tvLatestRes.json()).results, 'tv');
+
+        // Process Peak Anime with a Bayesian weighted rating.
         const peakAnimeRaw = [
           ...((await animeRes.json()).results || []),
           ...((await animeRes2.json()).results || [])
         ];
-
-        // Bayesian Rating: WR = (v/(v+m)) * R + (m/(v+m)) * C
-        // m = minimum votes required (1000), C = mean vote across results
         const m = 1000;
         const C = peakAnimeRaw.length > 0
           ? peakAnimeRaw.reduce((sum, a) => sum + (a.vote_average || 0), 0) / peakAnimeRaw.length
           : 7;
-
         const peakAnime = peakAnimeRaw
           .map(anime => {
             const v = anime.vote_count || 0;
@@ -134,28 +143,26 @@ export default function Home() {
           })
           .sort((a, b) => b.weightedRating - a.weightedRating);
 
-        const gemMovies = (await topRatedMovieRes.json()).results || [];
-        const moreTV = (await topRatedTVRes.json()).results || [];
+        const gemMovies = withType((await gemsRes.json()).results, 'movie');
+        const moreTV = withType((await moreTVRes.json()).results, 'tv');
 
         setTrendingMovies(movies);
         setLatestMovies(latestMov);
         setTrendingTV(tvShows);
         setLatestTV(latestTVShows);
-
         setTrendingAnime(peakAnime);
         setLatestAnime(peakAnime);
         setGems(gemMovies);
         setAwardWinningTV(moreTV);
-        // Reuse TV shows but shuffle or filter for 'Dark Dramas'
         setDarkDramas([...tvShows].reverse().slice(0, 10));
 
-        // Set Hero Item — only pick from titles that actually have a backdrop,
-        // so we never fall back to the generic promo-collage placeholder image.
-        const top10 = movies.slice(0, 10).filter((m) => m.backdrop_path);
-        if (top10.length > 0) {
-          const random = top10[Math.floor(Math.random() * top10.length)];
-          setHeroItem(random);
+        // Hero: a random trending movie (TMDB items always have a backdrop).
+        const heroPool = movies.filter((mv) => mv.backdrop_path).slice(0, 10);
+        if (heroPool.length > 0) {
+          setHeroItem(heroPool[Math.floor(Math.random() * heroPool.length)]);
           setHeroType("movie");
+        } else {
+          setHeroReady(true); // nothing to feature; don't trap the loader
         }
 
         setLoading(false);

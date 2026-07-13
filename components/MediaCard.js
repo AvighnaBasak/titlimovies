@@ -104,8 +104,34 @@ function MediaCard({ item, type, variant = "landscape", rank }) {
       return;
     }
 
-    // For horizontal (landscape) cards — fetch backdrop with language cascade:
-    // English → French → no-language (null) → any backdrop → prop fallback
+    // Fast path with English upgrade: if the item already carries a backdrop
+    // (TMDB data does), paint it immediately so the grid renders instantly, then
+    // upgrade to the first English-language backdrop in the background. This
+    // keeps loading fast while still preferring the English artwork.
+    if (item.backdrop_path) {
+      setImageSrc(`https://image.tmdb.org/t/p/w780${item.backdrop_path}`);
+      setLoaded(true);
+      setIsInitializing(false);
+
+      const id = item.tmdb_id || item.id;
+      if (id && (type !== 'anime' || !isNaN(id))) {
+        const endpointType = (item.media_type || type || 'movie') === 'movie' ? 'movie' : 'tv';
+        fetch(`/api/tmdb?path=/${endpointType}/${id}/images&include_image_language=en,null`)
+          .then((res) => res.json())
+          .then((data) => {
+            const en = (data.backdrops || []).find((b) => b.iso_639_1 === 'en');
+            if (en) {
+              const url = `https://image.tmdb.org/t/p/w780${en.file_path}`;
+              if (!isUrlBlocked(url)) setImageSrc(url);
+            }
+          })
+          .catch(() => {});
+      }
+      return;
+    }
+
+    // For horizontal (landscape) cards without a backdrop — fetch with a
+    // language cascade: English → French → no-language → any → prop fallback.
     const fetchBackdropCascade = async () => {
       const id = item.tmdb_id || item.id;
 
