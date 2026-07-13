@@ -1,7 +1,7 @@
 
 import Link from 'next/link';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 import { useTransition } from '../context/TransitionContext';
 import { useModal } from '../context/ModalContext';
@@ -12,6 +12,9 @@ export default function HeroBanner({ item, type, mobileItem }) {
     const [videoKey, setVideoKey] = useState(null);
     const [logoPath, setLogoPath] = useState(null);
     const [mobileKeywords, setMobileKeywords] = useState([]);
+    const [videoPlaying, setVideoPlaying] = useState(false);
+    const ytWrapperRef = useRef(null);
+    const ytPlayerRef = useRef(null);
 
     // Fetch keywords for mobile hero item
     useEffect(() => {
@@ -87,6 +90,80 @@ export default function HeroBanner({ item, type, mobileItem }) {
         fetchWithRetry();
     }, [item, type]);
 
+    // Desktop trailer via the YouTube IFrame API. We only reveal the video while
+    // it is actually PLAYING — in every other state (paused, buffering, ended,
+    // or when the tab is backgrounded) we hide it and show the backdrop, so
+    // YouTube's control chrome (play/pause/next) is never visible.
+    useEffect(() => {
+        if (!videoKey) {
+            setVideoPlaying(false);
+            if (ytPlayerRef.current) { try { ytPlayerRef.current.destroy(); } catch { } ytPlayerRef.current = null; }
+            return;
+        }
+        const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
+        if (!isDesktop) return;
+
+        let destroyed = false;
+        setVideoPlaying(false);
+
+        const init = () => {
+            if (destroyed || !ytWrapperRef.current) return;
+            ytWrapperRef.current.innerHTML = '';
+            const el = document.createElement('div');
+            ytWrapperRef.current.appendChild(el);
+            try {
+                ytPlayerRef.current = new window.YT.Player(el, {
+                    videoId: videoKey,
+                    width: '100%',
+                    height: '100%',
+                    playerVars: {
+                        autoplay: 1, mute: 1, controls: 0, loop: 1, playlist: videoKey,
+                        playsinline: 1, showinfo: 0, rel: 0, iv_load_policy: 3,
+                        modestbranding: 1, disablekb: 1, fs: 0,
+                    },
+                    events: {
+                        onReady: (e) => {
+                            const iframe = e.target.getIframe();
+                            if (iframe) { iframe.style.width = '100%'; iframe.style.height = '100%'; iframe.style.border = 'none'; iframe.style.pointerEvents = 'none'; }
+                            e.target.playVideo();
+                        },
+                        onStateChange: (e) => {
+                            if (destroyed) return;
+                            // 1 = playing. Anything else hides the video (shows backdrop).
+                            setVideoPlaying(e.data === window.YT.PlayerState.PLAYING);
+                        },
+                    },
+                });
+            } catch (err) { console.error('Hero YT init failed', err); }
+        };
+
+        let interval;
+        if (window.YT && window.YT.Player) {
+            init();
+        } else {
+            if (!document.querySelector('script[src*="youtube.com/iframe_api"]')) {
+                const s = document.createElement('script');
+                s.src = 'https://www.youtube.com/iframe_api';
+                document.head.appendChild(s);
+            }
+            interval = setInterval(() => { if (window.YT && window.YT.Player) { clearInterval(interval); init(); } }, 200);
+        }
+
+        // If the tab is hidden/blurred, force the backdrop (hide any paused chrome).
+        const onVisibility = () => { if (document.hidden) setVideoPlaying(false); };
+        document.addEventListener('visibilitychange', onVisibility);
+        window.addEventListener('blur', onVisibility);
+
+        return () => {
+            destroyed = true;
+            clearInterval(interval);
+            document.removeEventListener('visibilitychange', onVisibility);
+            window.removeEventListener('blur', onVisibility);
+            if (ytPlayerRef.current) { try { ytPlayerRef.current.destroy(); } catch { } ytPlayerRef.current = null; }
+            if (ytWrapperRef.current) ytWrapperRef.current.innerHTML = '';
+        };
+    }, [videoKey]);
+
     if (!item) return null;
 
     const title = item.title || item.name || item.title_en || "Featured";
@@ -128,21 +205,23 @@ export default function HeroBanner({ item, type, mobileItem }) {
 
                 {/* Background Layer */}
                 <div className="absolute inset-0 w-full h-full">
-                    {/* Fallback Image */}
+                    {/* Fallback Image — visible until the trailer is actually playing. */}
                     <div
                         className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000"
-                        style={{ backgroundImage: `url(${backdrop})`, opacity: videoKey ? 0 : 1 }}
+                        style={{ backgroundImage: `url(${backdrop})`, opacity: videoPlaying ? 0 : 1 }}
                     />
 
-                    {/* Video Player - Centered Cover Mode */}
+                    {/* Trailer (YouTube IFrame API). Scaled ~1.35x to crop baked-in
+                        letterbox bars. Only shown while PLAYING so control chrome is
+                        never visible; hidden on pause / blur / tab switch. */}
                     {videoKey && (
-                        <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
-                            <iframe
-                                className="absolute top-1/2 left-1/2 w-[100vw] h-[56.25vw] min-h-[100vh] min-w-[177.77vh] -translate-x-1/2 -translate-y-1/2 object-cover opacity-80"
-                                src={`https://www.youtube.com/embed/${videoKey}?autoplay=1&mute=1&controls=0&loop=1&playlist=${videoKey}&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&origin=http://localhost:3000`}
-                                title="Hero Video"
-                                allow="autoplay; encrypted-media"
-                                allowFullScreen
+                        <div
+                            className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none transition-opacity duration-700"
+                            style={{ opacity: videoPlaying ? 0.9 : 0 }}
+                        >
+                            <div
+                                ref={ytWrapperRef}
+                                className="absolute top-1/2 left-1/2 w-[100vw] h-[56.25vw] min-h-[100vh] min-w-[177.77vh] -translate-x-1/2 -translate-y-1/2 scale-[1.35]"
                             />
                         </div>
                     )}

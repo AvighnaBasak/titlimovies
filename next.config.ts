@@ -2,6 +2,12 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
 
+  // Ensure the VidLink WASM resolver assets are traced into the serverless
+  // bundle for /api/stream (they are read from disk at runtime, not imported).
+  outputFileTracingIncludes: {
+    '/api/stream': ['./lib/vidlink/**', './node_modules/libsodium-wrappers/**', './node_modules/libsodium/**'],
+  },
+
   // Allow VidFast iframe embedding + mobile media features
   async headers() {
     return [

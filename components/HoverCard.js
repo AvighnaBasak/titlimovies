@@ -7,12 +7,21 @@ import { useRouter } from "next/router";
 
 import { useModal } from "../context/ModalContext";
 import { useTransition } from "../context/TransitionContext";
+import { toggleMyList, isInMyList, MY_LIST_EVENT } from "../lib/myList";
 
 export default function HoverCard({ item, type, imageSrc }) {
     const router = useRouter();
     const { openModal } = useModal();
     const { navigateDelay } = useTransition();
     const [isHovered, setIsHovered] = useState(false);
+    const [inList, setInList] = useState(false);
+
+    useEffect(() => {
+        const sync = () => setInList(isInMyList(item.id || item.tmdb_id));
+        sync();
+        window.addEventListener(MY_LIST_EVENT, sync);
+        return () => window.removeEventListener(MY_LIST_EVENT, sync);
+    }, [item]);
     const [position, setPosition] = useState(null);
     const [isVisible, setIsVisible] = useState(false); // For animation transition
     const triggerRef = useRef(null);
@@ -169,8 +178,16 @@ export default function HoverCard({ item, type, imageSrc }) {
                         >
                             <svg className="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                         </button>
-                        <button className="w-10 h-10 rounded-full border-2 border-gray-500 text-white flex items-center justify-center hover:border-white hover:bg-white/10 transition scale-100 hover:scale-110 cursor-pointer">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); setInList(toggleMyList({ ...item, type })); }}
+                            className="w-10 h-10 rounded-full border-2 border-gray-500 text-white flex items-center justify-center hover:border-white hover:bg-white/10 transition scale-100 hover:scale-110 cursor-pointer"
+                            title={inList ? "Remove from My List" : "Add to My List"}
+                        >
+                            {inList ? (
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                            ) : (
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                            )}
                         </button>
                         {/* Remove from Continue Watching — only shows for CW items */}
                         {item.last_watched && (

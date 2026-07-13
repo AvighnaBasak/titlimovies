@@ -5,6 +5,7 @@ import Navbar from "../components/Navbar";
 import MediaRow from "../components/MediaRow";
 import HeroBanner from "../components/HeroBanner";
 import Footer from "../components/Footer";
+import { getContinueWatching } from "../lib/continueWatching";
 
 export default function Home() {
   const router = useRouter();
@@ -23,6 +24,7 @@ export default function Home() {
   const [heroItem, setHeroItem] = useState(null);
   const [heroType, setHeroType] = useState("movie");
   const [loading, setLoading] = useState(true);
+  const [heroReady, setHeroReady] = useState(false);
 
   // New state for Continue Watching
   const [continueWatching, setContinueWatching] = useState([]);
@@ -34,29 +36,12 @@ export default function Home() {
   const [sciFiFantasy, setSciFiFantasy] = useState([]);
   const [crimeShows, setCrimeShows] = useState([]);
 
-  // Load Continue Watching from localStorage
+  // Load Continue Watching from localStorage (centralized in lib/continueWatching).
   useEffect(() => {
-    const loadContinueWatching = () => {
-      try {
-        const history = JSON.parse(localStorage.getItem('continueWatching') || '[]');
-        // Filter to only items with valid display data
-        const valid = history.filter(item => item.id && (item.poster_path || item.backdrop_path));
-        console.log('[CW] Loaded', history.length, 'items,', valid.length, 'valid', valid);
-        // Clean up invalid entries from storage
-        if (valid.length !== history.length) {
-          localStorage.setItem('continueWatching', JSON.stringify(valid));
-        }
-        setContinueWatching(valid);
-      } catch (e) {
-        console.error("Failed to load continue watching history", e);
-      }
-    };
-
-    loadContinueWatching();
-
-    // Listen for updates from other components (InfoModal, Player)
-    window.addEventListener('continue-watching-update', loadContinueWatching);
-    return () => window.removeEventListener('continue-watching-update', loadContinueWatching);
+    const load = () => setContinueWatching(getContinueWatching());
+    load();
+    window.addEventListener('continue-watching-update', load);
+    return () => window.removeEventListener('continue-watching-update', load);
   }, []);
 
   // Detect user region via IP geolocation
@@ -164,8 +149,9 @@ export default function Home() {
         // Reuse TV shows but shuffle or filter for 'Dark Dramas'
         setDarkDramas([...tvShows].reverse().slice(0, 10));
 
-        // Set Hero Item (Randomly pick from Top 10 Movies Today)
-        const top10 = movies.slice(0, 10);
+        // Set Hero Item — only pick from titles that actually have a backdrop,
+        // so we never fall back to the generic promo-collage placeholder image.
+        const top10 = movies.slice(0, 10).filter((m) => m.backdrop_path);
         if (top10.length > 0) {
           const random = top10[Math.floor(Math.random() * top10.length)];
           setHeroItem(random);
@@ -181,6 +167,23 @@ export default function Home() {
 
     fetchData();
   }, []);
+
+  // Preload the hero backdrop so we don't reveal the page (and its shimmer
+  // placeholders) until the above-the-fold image is decoded. Falls back after a
+  // few seconds so a slow/broken image can never trap the loader.
+  useEffect(() => {
+    if (!heroItem) return;
+    const path = heroItem.backdrop_path;
+    if (!path) { setHeroReady(true); return; }
+    const img = new window.Image();
+    img.src = `https://image.tmdb.org/t/p/original${path}`;
+    const done = () => setHeroReady(true);
+    img.onload = done;
+    img.onerror = done;
+    const safety = setTimeout(done, 5000);
+    if (img.complete) done();
+    return () => clearTimeout(safety);
+  }, [heroItem]);
 
   // Hero Rotation Logic — only cycles through Top 10 Movies Today
   useEffect(() => {
@@ -357,7 +360,10 @@ export default function Home() {
     }
   }, [q, trendingMovies.length]);
 
-  if (loading && !isSearching && trendingMovies.length === 0) return (
+  // Hold the full-screen loader until the home data has loaded AND the hero
+  // image is ready — so the site appears complete rather than flashing shimmer
+  // placeholders. (Search view has its own loading state.)
+  if (!isSearching && (loading || !heroReady)) return (
     <div className="fixed inset-0 z-[99999] bg-[#141414] flex items-center justify-center">
       <div className="flex flex-col items-center">
         <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin mb-4"></div>
@@ -372,7 +378,13 @@ export default function Home() {
       {isSearching ? (
         <div className="pt-24 px-4 md:px-12 min-h-screen">
           <h2 className="text-2xl font-bold mb-6">Results for "{q}"</h2>
-          <MediaGrid items={searchResults} type={queryType || "movie"} />
+          {loading ? (
+            <div className="flex justify-center py-24">
+              <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : (
+            <MediaGrid items={searchResults} type={queryType || "movie"} />
+          )}
         </div>
       ) : (
         <>

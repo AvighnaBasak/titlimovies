@@ -7,6 +7,7 @@ import tmdbLoader from "../utils/tmdbLoader";
 import { motion } from "framer-motion";
 import { useModal } from "../context/ModalContext";
 import { useTransition } from "../context/TransitionContext";
+import { toggleMyList, isInMyList, MY_LIST_EVENT } from "../lib/myList";
 
 // Spring config for luxury Netflix feel (desktop only)
 const NETFLIX_SPRING = { type: "spring", stiffness: 300, damping: 35 };
@@ -30,8 +31,32 @@ export default function InfoModal() {
     const [isPlaying, setIsPlaying] = useState(false);
     const [showTapOverlay, setShowTapOverlay] = useState(false);
     const [episodeProgress, setEpisodeProgress] = useState({});
+    const [inList, setInList] = useState(false);
     const videoWrapperRef = useRef(null);
     const playerRef = useRef(null);
+
+    // Keep the My List button state in sync with storage.
+    useEffect(() => {
+        if (!details) return;
+        const sync = () => setInList(isInMyList(details.id));
+        sync();
+        window.addEventListener(MY_LIST_EVENT, sync);
+        return () => window.removeEventListener(MY_LIST_EVENT, sync);
+    }, [details]);
+
+    const handleToggleList = () => {
+        if (!details) return;
+        setInList(
+            toggleMyList({
+                id: details.id,
+                title: details.title || details.name,
+                name: details.name || details.title,
+                poster_path: details.poster_path,
+                backdrop_path: details.backdrop_path,
+                media_type: modalContent?.type || "movie",
+            })
+        );
+    };
 
     // Swipe-to-dismiss refs (mobile only)
     const scrollContainerRef = useRef(null);
@@ -593,8 +618,16 @@ export default function InfoModal() {
                                                 <svg className="w-5 h-5 md:w-6 md:h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                                                 Play
                                             </button>
-                                            <button className="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-gray-500 text-white flex items-center justify-center hover:border-white hover:bg-white/10 transition">
-                                                <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                                            <button
+                                                onClick={handleToggleList}
+                                                title={inList ? "Remove from My List" : "Add to My List"}
+                                                className="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-gray-500 text-white flex items-center justify-center hover:border-white hover:bg-white/10 transition"
+                                            >
+                                                {inList ? (
+                                                    <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                                ) : (
+                                                    <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                                                )}
                                             </button>
                                             <button className="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-gray-500 text-white flex items-center justify-center hover:border-white hover:bg-white/10 transition">
                                                 <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" /></svg>
@@ -660,12 +693,17 @@ export default function InfoModal() {
                                 </motion.button>
 
                                 <motion.button
+                                    onClick={handleToggleList}
                                     className="w-full bg-[#262626] text-white font-bold py-3 rounded flex items-center justify-center gap-2 active:scale-95 transition"
                                     variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0, transition: MOBILE_EASE } }}
                                     whileTap={{ scale: 0.95 }}
                                 >
-                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-                                    My List
+                                    {inList ? (
+                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                    ) : (
+                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                                    )}
+                                    {inList ? "My List" : "My List"}
                                 </motion.button>
 
                                 <motion.p className="text-sm text-gray-300 leading-relaxed font-light" variants={{ hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0, transition: MOBILE_EASE } }}>
