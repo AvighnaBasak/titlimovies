@@ -304,7 +304,13 @@ export default function InfoModal() {
                         onStateChange: (e) => {
                             if (destroyed) return;
                             if (e.data === 1) { setIsPlaying(true); setShowTapOverlay(false); }
-                            else if ((e.data === -1 || e.data === 5) && isMobile) setShowTapOverlay(true);
+                            else {
+                                // Paused / ended / buffering / cued → cover the video with the
+                                // backdrop so YouTube's paused controls are never visible
+                                // (this fires when the tab is backgrounded via alt-tab).
+                                setIsPlaying(false);
+                                if ((e.data === -1 || e.data === 5) && isMobile) setShowTapOverlay(true);
+                            }
                         },
                         onError: () => { if (!destroyed) setIsPlaying(false); }
                     }

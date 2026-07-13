@@ -168,10 +168,11 @@ export default function HeroBanner({ item, type, mobileItem }) {
 
     const title = item.title || item.name || item.title_en || "Featured";
 
-    // Robust Backdrop Logic
+    // Backdrop: prefer the title's own backdrop, then its poster. Never the old
+    // Netflix promo-collage image — that read as a placeholder while loading.
     const backdrop = item.backdrop_path
         ? `https://image.tmdb.org/t/p/original${item.backdrop_path}`
-        : "https://assets.nflxext.com/ffe/siteui/vlv3/f841d4c7-10e1-40af-bcae-07a3f8dc141a/f6d7434e-d6de-4185-a6d4-c77a2d08737b/US-en-20220502-popsignuptwoweeks-perspective_alpha_website_medium.jpg";
+        : (item.poster_path ? `https://image.tmdb.org/t/p/original${item.poster_path}` : null);
 
     // Determine Link for Desktop
     let href = "/";
@@ -207,8 +208,8 @@ export default function HeroBanner({ item, type, mobileItem }) {
                 <div className="absolute inset-0 w-full h-full">
                     {/* Fallback Image — visible until the trailer is actually playing. */}
                     <div
-                        className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000"
-                        style={{ backgroundImage: `url(${backdrop})`, opacity: videoPlaying ? 0 : 1 }}
+                        className="absolute inset-0 bg-cover bg-center bg-[#141414] transition-opacity duration-1000"
+                        style={{ backgroundImage: backdrop ? `url(${backdrop})` : 'none', opacity: videoPlaying ? 0 : 1 }}
                     />
 
                     {/* Trailer (YouTube IFrame API). Scaled ~1.35x to crop baked-in
